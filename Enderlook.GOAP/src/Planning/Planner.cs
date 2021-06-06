@@ -46,6 +46,12 @@ namespace Enderlook.GOAP
             where TGoal : IGoal<TWorld>
             where TWatchdog : IWatchdog
         {
+            if (agent is null)
+                ThrowNullPlanException();
+
+            if (actions is null)
+                ThrowNullActionsException();
+
             PlanBuilder<TWorld, TGoal, TAction> builder = Pool<PlanBuilder<TWorld, TGoal, TAction>>.Get();
             PlanResult result;
             if (log is null)
@@ -73,12 +79,6 @@ namespace Enderlook.GOAP
         {
             Debug.Assert(builder is not null);
 
-            if (agent is null)
-                ThrowNullPlanException();
-
-            if (actions is null)
-                ThrowNullActionsException();
-
             if (typeof(TAgent).IsValueType)
                 return PlanInner<TAgent, TWorld, TAction, TGoal, TWatchdog, TLog>(builder, agent, actions, out goal, out cost, watchdog);
 
@@ -92,33 +92,33 @@ namespace Enderlook.GOAP
                 if (typeof(IWorldStatePool<TWorld>).IsAssignableFrom(planType))
                 {
                     if (typeof(IGoalMerge<TGoal>).IsAssignableFrom(planType))
-                        return PlanInner<PlanPoolGoalWorldMergeGoal<TWorld, TAction, TGoal>, TWorld, TAction, TGoal, TWatchdog, TLog>(
-                            builder, new PlanPoolGoalWorldMergeGoal<TWorld, TAction, TGoal>(plan_), actions, out goal, out cost, watchdog);
-                    return PlanInner<PlanPoolGoalWorld<TWorld, TAction, TGoal>, TWorld, TAction, TGoal, TWatchdog, TLog>(
-                        builder, new PlanPoolGoalWorld<TWorld, TAction, TGoal>(plan_), actions, out goal, out cost, watchdog);
+                        return PlanInner<AgentWrapperPoolGoalPoolWorldMergeGoal<TWorld, TAction, TGoal>, TWorld, TAction, TGoal, TWatchdog, TLog>(
+                            builder, new(plan_), actions, out goal, out cost, watchdog);
+                    return PlanInner<AgentWrapperPoolGoalPoolWorld<TWorld, TAction, TGoal>, TWorld, TAction, TGoal, TWatchdog, TLog>(
+                        builder, new(plan_), actions, out goal, out cost, watchdog);
                 }
                 if (typeof(IGoalMerge<TGoal>).IsAssignableFrom(planType))
-                    return PlanInner<PlanPoolGoalMergeGoal<TWorld, TAction, TGoal>, TWorld, TAction, TGoal, TWatchdog, TLog>(
-                        builder, new PlanPoolGoalMergeGoal<TWorld, TAction, TGoal>(plan_), actions, out goal, out cost, watchdog);
-                return PlanInner<PlanPoolGoal<TWorld, TAction, TGoal>, TWorld, TAction, TGoal, TWatchdog, TLog>(
-                    builder, new PlanPoolGoal<TWorld, TAction, TGoal>(plan_), actions, out goal, out cost, watchdog);
+                    return PlanInner<AgentWrapperPoolGoalMergeGoal<TWorld, TAction, TGoal>, TWorld, TAction, TGoal, TWatchdog, TLog>(
+                        builder, new(plan_), actions, out goal, out cost, watchdog);
+                return PlanInner<AgentWrapperPoolGoal<TWorld, TAction, TGoal>, TWorld, TAction, TGoal, TWatchdog, TLog>(
+                    builder, new(plan_), actions, out goal, out cost, watchdog);
             }
 
             if (typeof(IWorldStatePool<TWorld>).IsAssignableFrom(planType))
             {
                 if (typeof(IGoalMerge<TGoal>).IsAssignableFrom(planType))
-                    return PlanInner<PlanPoolWorldMergeGoal<TWorld, TAction, TGoal>, TWorld, TAction, TGoal, TWatchdog, TLog>(
-                        builder, new PlanPoolWorldMergeGoal<TWorld, TAction, TGoal>(plan_), actions, out goal, out cost, watchdog);
-                return PlanInner<PlanPoolWorld<TWorld, TAction, TGoal>, TWorld, TAction, TGoal, TWatchdog, TLog>(
-                    builder, new PlanPoolWorld<TWorld, TAction, TGoal>(plan_), actions, out goal, out cost, watchdog);
+                    return PlanInner<AgentWrapperPoolWorldMergeGoal<TWorld, TAction, TGoal>, TWorld, TAction, TGoal, TWatchdog, TLog>(
+                        builder, new(plan_), actions, out goal, out cost, watchdog);
+                return PlanInner<AgentWrapperPoolWorld<TWorld, TAction, TGoal>, TWorld, TAction, TGoal, TWatchdog, TLog>(
+                    builder, new(plan_), actions, out goal, out cost, watchdog);
             }
 
             if (typeof(IGoalMerge<TGoal>).IsAssignableFrom(planType))
-                return PlanInner<PlanWithoutPoolingMergeGoal<TWorld, TAction, TGoal>, TWorld, TAction, TGoal, TWatchdog, TLog>(
-                    builder, new PlanWithoutPoolingMergeGoal<TWorld, TAction, TGoal>(plan_), actions, out goal, out cost, watchdog);
+                return PlanInner<AgentWrapperMergeGoal<TWorld, TAction, TGoal>, TWorld, TAction, TGoal, TWatchdog, TLog>(
+                    builder, new(plan_), actions, out goal, out cost, watchdog);
 
-            return PlanInner<PlanWithoutPooling<TWorld, TAction, TGoal>, TWorld, TAction, TGoal, TWatchdog, TLog>(
-                builder, new PlanWithoutPooling<TWorld, TAction, TGoal>(plan_), actions, out goal, out cost, watchdog);
+            return PlanInner<AgentWrapper<TWorld, TAction, TGoal>, TWorld, TAction, TGoal, TWatchdog, TLog>(
+                builder, new(plan_), actions, out goal, out cost, watchdog);
         }
 
         private static PlanResult PlanInner<TAgent, TWorld, TAction, TGoal, TWatchdog, TLog>(
