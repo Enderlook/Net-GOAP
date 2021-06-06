@@ -14,17 +14,23 @@ namespace Enderlook.GOAP
         where TGoal : IGoal<TWorld>
         where TAction : IAction<TWorld, TGoal>
     {
-        private const int NOT_FOUND = -1;
-        private const int CANCELLED = -2;
-
         private RawList<Node> nodes = RawList<Node>.Create();
         private BinaryHeapMin<int, float> toVisit = new();
+
+        private State state;
         private int endNode;
         private float cost;
 
         private RawList<string> nodesText = RawList<string>.Create();
         private StringBuilder builder = new();
         public Action<string> log;
+
+        [Flags]
+        private enum State : byte
+        {
+            Cancelled,
+            Found,
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void Enqueue<TLog>(Node node, float cost)
@@ -54,6 +60,9 @@ namespace Enderlook.GOAP
         {
             if (Toggle.IsOn<TLog>())
                 builder.Append("Enqueue Valid Path: ");
+            endNode = nodes.Count;
+            this.cost = cost;
+            state |= State.Found;
             Enqueue<TLog>(new(parent, action), cost);
         }
 
@@ -121,7 +130,7 @@ namespace Enderlook.GOAP
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void Cancel<TLog>()
         {
-            endNode = CANCELLED;
+            state |= State.Cancelled;
             if (Toggle.IsOn<TLog>())
                 AppendAndLog("Cancelled.");
         }
@@ -131,20 +140,12 @@ namespace Enderlook.GOAP
         {
             Debug.Assert(typeof(TAgent).IsValueType, $"{nameof(TAgent)} must be a value type to constant propagate type checks.");
 
-            if (endNode == NOT_FOUND)
+            if ((state & State.Found) == 0)
             {
                 goal = default;
                 cost = 0;
                 Clear<Toggle.No>(0);
-                return PlanResult.NotFound;
-            }
-
-            if (endNode == CANCELLED)
-            {
-                goal = default;
-                cost = 0;
-                Clear<Toggle.No>(0);
-                return PlanResult.Cancelled;
+                return (state & State.Cancelled) != 0 ? PlanResult.Cancelled : PlanResult.NotFound;
             }
 
             cost = this.cost;
@@ -173,7 +174,7 @@ namespace Enderlook.GOAP
 
             Clear<Toggle.Yes>(lastIndex);
 
-            return PlanResult.FoundPlan;
+            return (state & State.Cancelled) != 0 ? PlanResult.CancelledButFound :  PlanResult.FoundPlan;
 
             void Clear<TIgnore>(int ignore)
             {
@@ -207,11 +208,12 @@ namespace Enderlook.GOAP
                     }
                 }
 
-                endNode = NOT_FOUND;
+                state = default;
+                endNode = default;
                 nodes.Clear();
                 toVisit.Clear();
                 nodesText.Clear();
-                log = null;
+                log = default;
             }
         }
 
