@@ -15,5 +15,12 @@
     <LangVersion>9</LangVersion>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Enderlook.Collections-Extensions" Version="0.1.0" />
+    <PackageReference Include="Enderlook.Collections.LowLevel" Version="0.6.0" />
+    <PackageReference Include="Enderlook.Collections" Version="0.1.0" />
+    <PackageReference Include="System.Buffers" Version="4.5.1" />
+    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="4.5.3" />
+  </ItemGroup>
 
 </Project>
