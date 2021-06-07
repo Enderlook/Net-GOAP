@@ -312,7 +312,7 @@ namespace Enderlook.GOAP
             {
                 if (typeof(IWorldStatePool<TWorld>).IsAssignableFrom(typeof(TAgent))) 
                     ((IWorldStatePool<TWorld>)agent).Return(newMemory);
-                builder.EnqueueValidPath<TLog>(id, action, cost + action.GetCost());
+                builder.EnqueueValidPath<TLog>(id, action, cost);
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
