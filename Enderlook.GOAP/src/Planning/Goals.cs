@@ -11,14 +11,14 @@ namespace Enderlook.GOAP
         where TWorld : IWorldState<TWorld>
         where TGoal : IGoal<TWorld>
     {
-        private TGoal single;
-        private Array array;
+        private TGoal? single;
+        private Array? array;
         private int count;  // This field only track count of array, so it's zero even when single is set.
 
         private string DebuggerDisplay {
             get {
                 if (this.array is null)
-                    return string.Concat("[", single.ToString(), "]");
+                    return string.Concat("[", single!.ToString(), "]");
                 StringBuilder builder = new();
                 TGoal[] array = Unsafe.As<TGoal[]>(this.array);
                 builder.Append('[');
@@ -34,7 +34,7 @@ namespace Enderlook.GOAP
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get {
                 Debug.Assert(array is null);
-                return single;
+                return single!;
             }
         }
 
@@ -61,7 +61,7 @@ namespace Enderlook.GOAP
         {
             if (array is null)
             {
-                goal = single;
+                goal = single!;
                 return false;
             }
             goal = Unsafe.As<TGoal[]>(array)[index++];
@@ -126,12 +126,12 @@ namespace Enderlook.GOAP
 
             if (array is null)
             {
-                if (typeof(IGoalMerge<TGoal>).IsAssignableFrom(typeof(TAgent)) && ((IGoalMerge<TGoal>)agent).TryMerge(single, goal, out TGoal newGoal))
+                if (typeof(IGoalMerge<TGoal>).IsAssignableFrom(typeof(TAgent)) && ((IGoalMerge<TGoal>)agent).TryMerge(single!, goal, out TGoal newGoal))
                     return new(newGoal);
 
                 TGoal[] array_ = Unsafe.As<TGoal[]>(Rent(2));
                 array_[1] = goal;
-                array_[0] = single;
+                array_[0] = single!;
                 return new(array_, 2);
             }
             else
@@ -162,7 +162,7 @@ namespace Enderlook.GOAP
             if (array is null)
             {
                 if (typeof(IGoalPool<TGoal>).IsAssignableFrom(typeof(TAgent)))
-                    ((IGoalPool<TGoal>)agent).Return(single);
+                    ((IGoalPool<TGoal>)agent).Return(single!);
 
 #if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
                 if (RuntimeHelpers.IsReferenceOrContainsReferences<TGoal>())
@@ -212,7 +212,7 @@ namespace Enderlook.GOAP
         public void Append(StringBuilder builder)
         {
             if (array is null)
-                builder.Append('[').Append(single.ToString()).Append(']');
+                builder.Append('[').Append(single!.ToString()).Append(']');
             else
             {
                 builder.Append('[');

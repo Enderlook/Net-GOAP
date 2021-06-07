@@ -4,6 +4,7 @@ using Enderlook.Collections.LowLevel;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Text;
 
@@ -23,7 +24,7 @@ namespace Enderlook.GOAP
 
         private RawList<string> nodesText = RawList<string>.Create();
         private StringBuilder builder = new();
-        public Action<string> log;
+        public Action<string>? log;
 
         [Flags]
         private enum State : byte
@@ -83,7 +84,7 @@ namespace Enderlook.GOAP
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal bool TryDequeue<TAgent, TLog>(out int id, out float cost, out Goals<TWorld, TGoal> goals, out TWorld world)
+        internal bool TryDequeue<TAgent, TLog>(out int id, out float cost, out Goals<TWorld, TGoal> goals, [MaybeNullWhen(false)] out TWorld world)
         {
             Debug.Assert(typeof(TAgent).IsValueType, $"{nameof(TAgent)} must be a value type to constant propagate type checks.");
 
@@ -98,9 +99,6 @@ namespace Enderlook.GOAP
                     Log();
                 }
 
-                goals = node.Goals;
-                world = node.World;
-
                 if (typeof(IWorldStatePool<TWorld>).IsAssignableFrom(typeof(TAgent)))
                     node.WasDequeue();
 
@@ -108,9 +106,20 @@ namespace Enderlook.GOAP
                 {
                     endNode = id;
                     this.cost = cost;
+
+#if NET5_0_OR_GREATER
+                    Unsafe.SkipInit(out goals);
+                    Unsafe.SkipInit(out world);
+#else
+                    goals = default;
+                    world = default;
+#endif
+
                     return false;
                 }
 
+                goals = node.Goals;
+                world = node.World!;
                 return true;
             }
 
@@ -136,7 +145,7 @@ namespace Enderlook.GOAP
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        internal PlanResult Finalize<TAgent, TLog>(TAgent agent, Stack<TAction> actions, out TGoal goal, out float cost)
+        internal PlanResult Finalize<TAgent, TLog>(TAgent agent, Stack<TAction> actions, out TGoal? goal, out float cost)
         {
             Debug.Assert(typeof(TAgent).IsValueType, $"{nameof(TAgent)} must be a value type to constant propagate type checks.");
 
@@ -169,7 +178,7 @@ namespace Enderlook.GOAP
                     break;
                 }
                 lastIndex = index;
-                actions.Push(node.Action);
+                actions.Push(node.Action!);
             }
 
             Clear<Toggle.Yes>(lastIndex);
@@ -187,7 +196,7 @@ namespace Enderlook.GOAP
                     {
                         Debug.Assert(node.Mode == Node.Type.Start);
                         if (poolMemory)
-                            ((IWorldStatePool<TWorld>)agent).Return(node.World);
+                            ((IWorldStatePool<TWorld>)agent).Return(node.World!);
                     }
                     else
                     {
@@ -197,7 +206,7 @@ namespace Enderlook.GOAP
                         if ((node.Mode & (Node.Type.Start | Node.Type.Normal)) != 0)
                         {
                             if (poolMemory)
-                                ((IWorldStatePool<TWorld>)agent).Return(node.World);
+                                ((IWorldStatePool<TWorld>)agent).Return(node.World!);
                             node.Goals.Return(agent);
                         }
                         else
@@ -249,9 +258,9 @@ namespace Enderlook.GOAP
         private struct Node
         {
             public int Parent;
-            public TAction Action;
+            public TAction? Action;
             public Goals<TWorld, TGoal> Goals;
-            public TWorld World;
+            public TWorld? World;
             public Type Mode;
 
             [Flags]

@@ -13,7 +13,7 @@ namespace Enderlook.GOAP
         private const int GROW_FACTOR = 2;
         private const int SHRINK_THRESHOLD = 4;
         private const int SURVIVE_RATIO = 2;
-        private static object[] pool = ArrayPool<object>.Shared.Rent(INITAL_CAPACITY);
+        private static object[]? pool = ArrayPool<object>.Shared.Rent(INITAL_CAPACITY);
         private static int index = -1;
 
 #pragma warning disable CA1806 // Do not ignore method results
@@ -38,7 +38,7 @@ namespace Enderlook.GOAP
 #endif
 
                 item = Unsafe.As<T>(slot);
-                slot = null;
+                slot = null!;
             }
 
             pool = pool_;
@@ -81,7 +81,7 @@ namespace Enderlook.GOAP
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static object[] GetPool()
         {
-            object[] pool_;
+            object[]? pool_;
             do
             {
                 pool_ = Interlocked.Exchange(ref pool, null);

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Threading;
 
@@ -13,7 +14,7 @@ namespace Enderlook.GOAP
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static PlanResult Plan<TAgent, TWorld, TAction, TGoal>(
-            TAgent agent, Stack<TAction> actions, out TGoal goal, out float cost, CancellationToken token, Action<string> log = null)
+            TAgent agent, Stack<TAction> actions, out TGoal? goal, out float cost, CancellationToken token, Action<string>? log = null)
             where TAgent : IAgent<TWorld, TGoal, TAction>
             where TWorld : IWorldState<TWorld>
             where TAction : IAction<TWorld, TGoal>
@@ -22,7 +23,7 @@ namespace Enderlook.GOAP
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static PlanResult Plan<TAgent, TWorld, TAction, TGoal>(
-            TAgent agent, Stack<TAction> actions, out TGoal goal, out float cost, float maximumCost, Action<string> log = null)
+            TAgent agent, Stack<TAction> actions, out TGoal? goal, out float cost, float maximumCost, Action<string>? log = null)
             where TAgent : IAgent<TWorld, TGoal, TAction>
             where TWorld : IWorldState<TWorld>
             where TAction : IAction<TWorld, TGoal>
@@ -31,7 +32,7 @@ namespace Enderlook.GOAP
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static PlanResult Plan<TAgent, TWorld, TAction, TGoal>(
-            TAgent agent, Stack<TAction> actions, out TGoal goal, out float cost, Action<string> log = null)
+            TAgent agent, Stack<TAction> actions, out TGoal? goal, out float cost, Action<string>? log = null)
             where TAgent : IAgent<TWorld, TGoal, TAction>
             where TWorld : IWorldState<TWorld>
             where TAction : IAction<TWorld, TGoal>
@@ -39,7 +40,7 @@ namespace Enderlook.GOAP
             => Plan<TAgent, TWorld, TAction, TGoal, EndlessWatchdog>(agent, actions, out goal, out cost, new EndlessWatchdog(), log);
 
         private static PlanResult Plan<TAgent, TWorld, TAction, TGoal, TWatchdog>(
-            TAgent agent, Stack<TAction> actions, out TGoal goal, out float cost, TWatchdog watchdog, Action<string> log)
+            TAgent agent, Stack<TAction> actions, out TGoal? goal, out float cost, TWatchdog watchdog, Action<string>? log)
             where TAgent : IAgent<TWorld, TGoal, TAction>
             where TWorld : IWorldState<TWorld>
             where TAction : IAction<TWorld, TGoal>
@@ -70,7 +71,7 @@ namespace Enderlook.GOAP
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static PlanResult Plan<TAgent, TWorld, TAction, TGoal, TWatchdog, TLog>(
             TAgent agent, PlanBuilder<TWorld, TGoal, TAction> builder, Stack<TAction> actions,
-            out TGoal goal, out float cost, TWatchdog watchdog)
+            out TGoal? goal, out float cost, TWatchdog watchdog)
             where TAgent : IAgent<TWorld, TGoal, TAction>
             where TWorld : IWorldState<TWorld>
             where TAction : IAction<TWorld, TGoal>
@@ -80,7 +81,7 @@ namespace Enderlook.GOAP
             Debug.Assert(builder is not null);
 
             if (typeof(TAgent).IsValueType)
-                return PlanInner<TAgent, TWorld, TAction, TGoal, TWatchdog, TLog>(builder, agent, actions, out goal, out cost, watchdog);
+                return PlanInner<TAgent, TWorld, TAction, TGoal, TWatchdog, TLog>(builder!, agent, actions, out goal, out cost, watchdog);
 
 #pragma warning disable HAA0601 // Value type to reference type conversion causing boxing allocation
             IAgent<TWorld, TGoal, TAction> plan_ = agent;
@@ -93,36 +94,36 @@ namespace Enderlook.GOAP
                 {
                     if (typeof(IGoalMerge<TGoal>).IsAssignableFrom(planType))
                         return PlanInner<AgentWrapperPoolGoalPoolWorldMergeGoal<TWorld, TAction, TGoal>, TWorld, TAction, TGoal, TWatchdog, TLog>(
-                            builder, new(plan_), actions, out goal, out cost, watchdog);
+                            builder!, new(plan_), actions, out goal, out cost, watchdog);
                     return PlanInner<AgentWrapperPoolGoalPoolWorld<TWorld, TAction, TGoal>, TWorld, TAction, TGoal, TWatchdog, TLog>(
-                        builder, new(plan_), actions, out goal, out cost, watchdog);
+                        builder!, new(plan_), actions, out goal, out cost, watchdog);
                 }
                 if (typeof(IGoalMerge<TGoal>).IsAssignableFrom(planType))
                     return PlanInner<AgentWrapperPoolGoalMergeGoal<TWorld, TAction, TGoal>, TWorld, TAction, TGoal, TWatchdog, TLog>(
-                        builder, new(plan_), actions, out goal, out cost, watchdog);
+                        builder!, new(plan_), actions, out goal, out cost, watchdog);
                 return PlanInner<AgentWrapperPoolGoal<TWorld, TAction, TGoal>, TWorld, TAction, TGoal, TWatchdog, TLog>(
-                    builder, new(plan_), actions, out goal, out cost, watchdog);
+                    builder!, new(plan_), actions, out goal, out cost, watchdog);
             }
 
             if (typeof(IWorldStatePool<TWorld>).IsAssignableFrom(planType))
             {
                 if (typeof(IGoalMerge<TGoal>).IsAssignableFrom(planType))
                     return PlanInner<AgentWrapperPoolWorldMergeGoal<TWorld, TAction, TGoal>, TWorld, TAction, TGoal, TWatchdog, TLog>(
-                        builder, new(plan_), actions, out goal, out cost, watchdog);
+                        builder!, new(plan_), actions, out goal, out cost, watchdog);
                 return PlanInner<AgentWrapperPoolWorld<TWorld, TAction, TGoal>, TWorld, TAction, TGoal, TWatchdog, TLog>(
-                    builder, new(plan_), actions, out goal, out cost, watchdog);
+                    builder!, new(plan_), actions, out goal, out cost, watchdog);
             }
 
             if (typeof(IGoalMerge<TGoal>).IsAssignableFrom(planType))
                 return PlanInner<AgentWrapperMergeGoal<TWorld, TAction, TGoal>, TWorld, TAction, TGoal, TWatchdog, TLog>(
-                    builder, new(plan_), actions, out goal, out cost, watchdog);
+                    builder!, new(plan_), actions, out goal, out cost, watchdog);
 
             return PlanInner<AgentWrapper<TWorld, TAction, TGoal>, TWorld, TAction, TGoal, TWatchdog, TLog>(
-                builder, new(plan_), actions, out goal, out cost, watchdog);
+                builder!, new(plan_), actions, out goal, out cost, watchdog);
         }
 
         private static PlanResult PlanInner<TAgent, TWorld, TAction, TGoal, TWatchdog, TLog>(
-            PlanBuilder<TWorld, TGoal, TAction> builder, TAgent agent, Stack<TAction> actions, out TGoal goal, out float cost, TWatchdog watchdog)
+            PlanBuilder<TWorld, TGoal, TAction> builder, TAgent agent, Stack<TAction> actions, out TGoal? goal, out float cost, TWatchdog watchdog)
             where TAgent : IAgent<TWorld, TGoal, TAction>
             where TWorld : IWorldState<TWorld>
             where TAction : IAction<TWorld, TGoal>
@@ -134,7 +135,7 @@ namespace Enderlook.GOAP
 
             using IEnumerator<TAction> availableActions = Initialize();
 
-            while (builder.TryDequeue<TAgent, TLog>(out int id, out float currentCost, out Goals<TWorld, TGoal> currentGoals, out TWorld currentMemory))
+            while (builder.TryDequeue<TAgent, TLog>(out int id, out float currentCost, out Goals<TWorld, TGoal> currentGoals, out TWorld? currentMemory))
             {
                 if (!watchdog.CanContinue(currentCost))
                 {
@@ -350,8 +351,10 @@ namespace Enderlook.GOAP
             static void ThrowInvalidSatisfactionResultException() => throw new InvalidOperationException($"Returned value is not a valid value of {nameof(SatisfactionResult)}");
         }
 
+        [DoesNotReturn]
         private static void ThrowNullActionsException() => throw new ArgumentNullException("actions");
 
+        [DoesNotReturn]
         private static void ThrowNullPlanException() => throw new ArgumentNullException("plan");
     }
 }
