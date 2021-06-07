@@ -135,7 +135,7 @@ namespace Enderlook.GOAP
 
             using IEnumerator<TAction> availableActions = Initialize();
 
-            while (builder.TryDequeue<TAgent, TLog>(out int id, out float currentCost, out Goals<TWorld, TGoal> currentGoals, out TWorld? currentMemory))
+            while (builder.TryDequeue<TAgent, TLog>(out int id, out float currentCost, out int currentGoalIndex, out TWorld? currentMemory))
             {
                 if (!watchdog.CanContinue(currentCost))
                 {
@@ -160,30 +160,30 @@ namespace Enderlook.GOAP
                     action.ApplyEffect(newMemory);
 
                     if (Toggle.IsOn<TLog>())
-                        builder.AppendAndLog(newMemory.ToString());
+                        builder.AppendToLog(newMemory.ToString());
 
-                    TGoal currentGoal = currentGoals.Peek();
+                    PlanBuilder<TWorld, TGoal, TAction>.GoalNode currentGoal = builder.GetGoal(currentGoalIndex);
 
                     if (Toggle.IsOn<TLog>())
                     {
-                        builder.AppendToLog("   - Check goal: ");
-                        builder.AppendToLog(currentGoal.ToString());
+                        builder.AppendToLog(". And goal: ");
+                        builder.AppendToLog(currentGoal.Goal.ToString());
                     }
 
-                    switch (currentGoal.CheckAndTrySatisfy(currentMemory, newMemory))
+                    switch (currentGoal.Goal.CheckAndTrySatisfy(currentMemory, newMemory))
                     {
                         case SatisfactionResult.Satisfied:
                         {
                             if (Toggle.IsOn<TLog>())
-                                builder.AppendToLog(". Satisfied.\n     ");
+                                builder.AppendToLog(". Satisfied.\n   ");
 
                             float newCost = currentCost + action.GetCost();
                             if (action.TryGetRequiredGoal(out TGoal requiredGoal))
                             {
-                                Goals<TWorld, TGoal> newGoals = currentGoals.WithReplacement(requiredGoal);
+                                int newGoals = currentGoal.WithReplacement(builder, requiredGoal);
                                 builder.Enqueue<TLog>(id, action, newCost, newGoals, newMemory);
                             }
-                            else if (currentGoals.WithPop(out Goals<TWorld, TGoal> newGoals))
+                            else if (currentGoal.WithPop(out int newGoals))
                                 builder.Enqueue<TLog>(id, action, newCost, newGoals, newMemory);
                             else
                                 FoundValidPath(id, newCost, action, newMemory);
@@ -193,16 +193,16 @@ namespace Enderlook.GOAP
                         case SatisfactionResult.Progressed:
                         {
                             if (Toggle.IsOn<TLog>())
-                                builder.AppendToLog(". Progressed.\n     ");
+                                builder.AppendToLog(". Progressed.\n   ");
 
                             float newCost = currentCost + action.GetCost();
                             if (action.TryGetRequiredGoal(out TGoal requiredGoal))
                             {
-                                Goals<TWorld, TGoal> newGoals = currentGoals.WithPush<TAgent, TAction>(agent, requiredGoal);
+                                int newGoals = PlanBuilder<TWorld, TGoal, TAction>.GoalNode.WithPush(builder, currentGoalIndex, requiredGoal);
                                 builder.Enqueue<TLog>(id, action, newCost, newGoals, newMemory);
                             }
                             else
-                                builder.Enqueue<TLog>(id, action, newCost, currentGoals, newMemory);
+                                builder.Enqueue<TLog>(id, action, newCost, currentGoalIndex, newMemory);
                             break;
                         }
                         case SatisfactionResult.NotProgressed:
@@ -223,7 +223,6 @@ namespace Enderlook.GOAP
 
                 availableActions.Reset();
 
-                currentGoals.Return(agent);
                 if (typeof(IWorldStatePool<TWorld>).IsAssignableFrom(typeof(TAgent)))
                     ((IWorldStatePool<TWorld>)agent).Return(currentMemory);
             }
