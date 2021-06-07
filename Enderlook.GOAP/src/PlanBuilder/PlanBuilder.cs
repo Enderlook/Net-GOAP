@@ -10,14 +10,12 @@ using System.Text;
 
 namespace Enderlook.GOAP
 {
-    internal sealed partial class PlanBuilder<TWorld, TGoal, TAction>
-        where TWorld : IWorldState<TWorld>
-        where TGoal : IGoal<TWorld>
-        where TAction : IAction<TWorld, TGoal>
+    internal sealed partial class PlanBuilder<TWorldState, TGoal>
+        where TWorldState : IWorldState<TWorldState>
+        where TGoal : IGoal<TWorldState>
     {
         private RawList<Node> nodes = RawList<Node>.Create();
         private BinaryHeapMin<int, float> toVisit = new();
-
         private RawList<GoalNode> goals = RawList<GoalNode>.Create();
 
         private State state;
@@ -25,6 +23,7 @@ namespace Enderlook.GOAP
         private float cost;
 
         private RawList<string> nodesText = RawList<string>.Create();
+        private RawList<string> actionsText = RawList<string>.Create();
         private StringBuilder builder = new();
         public Action<string>? log;
 
@@ -52,7 +51,7 @@ namespace Enderlook.GOAP
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal void EnqueueGoal<TLog>(TGoal goal, TWorld world)
+        internal void EnqueueGoal<TLog>(TGoal goal, TWorldState world)
         {
             if (Toggle.IsOn<TLog>())
                 builder.Append("Enqueue Goal: ");
@@ -60,7 +59,7 @@ namespace Enderlook.GOAP
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal void EnqueueValidPath<TLog>(int parent, TAction action, float cost)
+        internal void EnqueueValidPath<TLog>(int parent, int action, float cost)
         {
             if (Toggle.IsOn<TLog>())
                 builder.Append("Enqueue Valid Path: ");
@@ -71,7 +70,7 @@ namespace Enderlook.GOAP
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal void Enqueue<TLog>(int parent, TAction action, float cost, int goals, TWorld world)
+        internal void Enqueue<TLog>(int parent, int action, float cost, int goals, TWorldState world)
         {
             if (Toggle.IsOn<TLog>())
                 builder.Append("Enqueue: ");
@@ -79,7 +78,7 @@ namespace Enderlook.GOAP
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal void Enqueue<TLog>(int parent, TAction action, float cost, TGoal goal, TWorld world)
+        internal void Enqueue<TLog>(int parent, int action, float cost, TGoal goal, TWorldState world)
         {
             if (Toggle.IsOn<TLog>())
                 builder.Append("Enqueue: ");
@@ -90,7 +89,7 @@ namespace Enderlook.GOAP
         public GoalNode GetGoal(int index) => goals[index];
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal bool TryDequeue<TAgent, TLog>(out int id, out float cost, out int goals, [MaybeNullWhen(false)] out TWorld world)
+        internal bool TryDequeue<TAgent, TLog>(out int id, out float cost, out int goals, [MaybeNullWhen(false)] out TWorldState world)
         {
             Debug.Assert(typeof(TAgent).IsValueType, $"{nameof(TAgent)} must be a value type to constant propagate type checks.");
 
@@ -105,7 +104,7 @@ namespace Enderlook.GOAP
                     Log();
                 }
 
-                if (typeof(IWorldStatePool<TWorld>).IsAssignableFrom(typeof(TAgent)))
+                if (typeof(IWorldStatePool<TWorldState>).IsAssignableFrom(typeof(TAgent)))
                     node.WasDequeue();
 
                 if (node.Mode == Node.Type.End)
@@ -150,7 +149,7 @@ namespace Enderlook.GOAP
                 AppendAndLog("Cancelled.");
         }
 
-        internal PlanResult Finalize<TAgent, TLog>(Stack<TAction> actions, out TGoal? goal, out float cost)
+        internal PlanResult Finalize<TAgent, TAction, TLog>(Array actions, Stack<TAction> plan, out TGoal? goal, out float cost)
         {
             Debug.Assert(typeof(TAgent).IsValueType, $"{nameof(TAgent)} must be a value type to constant propagate type checks.");
 
@@ -166,14 +165,14 @@ namespace Enderlook.GOAP
             if (Toggle.IsOn<TLog>())
             { 
                 builder.Append("Finalized: ");
-                AppendToLog(endNode);
+                AppendToLogNode(endNode);
                 builder.Append("\nTotal cost of plan ").Append(cost).Append('.');
                 builder.Append("\nTotal actions enqueued: ").Append(nodes.Count).Append('.');
                 builder.Append("\nTotal goals stored: ").Append(goals.Count).Append('.');
                 builder.Append("\nRemaining nodes to visit: ").Append(toVisit.Count).Append('.');
             }
 
-            int actionsCount = actions.Count;
+            int actionsCount = plan.Count;
 
             int index = endNode;
             int lastIndex = index;
@@ -187,12 +186,12 @@ namespace Enderlook.GOAP
                     break;
                 }
                 lastIndex = index;
-                actions.Push(node.Action!);
+                plan.Push(Utils.Get<TAction>(actions, node.Action));
             }
 
             if (Toggle.IsOn<TLog>())
             {
-                builder.Append("\nLength of plan ").Append(actions.Count - actionsCount).Append('.');
+                builder.Append("\nLength of plan ").Append(plan.Count - actionsCount).Append('.');
                 Log();
             }
 
@@ -215,7 +214,7 @@ namespace Enderlook.GOAP
 
             void Clear<TIgnore>(int ignore)
             {
-                bool poolMemory = typeof(IWorldStatePool<TWorld>).IsAssignableFrom(typeof(TAgent));
+                bool poolMemory = typeof(IWorldStatePool<TWorldState>).IsAssignableFrom(typeof(TAgent));
 
                 for (int i = 0; i < nodes.Count; i++)
                 {
@@ -224,7 +223,7 @@ namespace Enderlook.GOAP
                     {
                         Debug.Assert(node.Mode == Node.Type.Start);
                         if (poolMemory)
-                            ((IWorldStatePool<TWorld>)agent).Return(node.World!);
+                            ((IWorldStatePool<TWorldState>)agent).Return(node.World!);
                     }
                     else
                     {
@@ -234,7 +233,7 @@ namespace Enderlook.GOAP
                         if ((node.Mode & (Node.Type.Start | Node.Type.Normal)) != 0)
                         {
                             if (poolMemory)
-                                ((IWorldStatePool<TWorld>)agent).Return(node.World!);
+                                ((IWorldStatePool<TWorldState>)agent).Return(node.World!);
                         }
                         else
                             Debug.Assert((node.Mode & (Node.Type.End)) != 0);
@@ -250,12 +249,13 @@ namespace Enderlook.GOAP
                 nodes.Clear();
                 toVisit.Clear();
                 nodesText.Clear();
+                actionsText.Clear();
                 goals.Clear();
                 log = default;
             }
         }
 
-        private void AppendToLog(int id)
+        private void AppendToLogNode(int id)
         {
             builder.Append(nodesText[id]);
             Node node = nodes[id];
@@ -285,5 +285,11 @@ namespace Enderlook.GOAP
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void AppendToLog(string message) => builder.Append(message);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void AppendToLog(int number) => builder.Append(number);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void AddActionText(string message) => actionsText.Add(message);
     }
 }

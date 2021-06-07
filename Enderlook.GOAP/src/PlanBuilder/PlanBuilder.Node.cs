@@ -1,20 +1,19 @@
 ﻿using Enderlook.Collections.LowLevel;
 
 using System;
-using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace Enderlook.GOAP
 {
-    internal sealed partial class PlanBuilder<TWorld, TGoal, TAction>
+    internal sealed partial class PlanBuilder<TWorldState, TGoal>
     {
         private struct Node
         {
             public int Parent;
-            public TAction? Action;
+            public int Action;
             public int Goals;
-            public TWorld? World;
+            public TWorldState? World;
             public Type Mode;
 
             [Flags]
@@ -27,17 +26,17 @@ namespace Enderlook.GOAP
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public Node(int goals, TWorld world)
+            public Node(int goals, TWorldState world)
             {
                 Parent = -1;
                 Goals = goals;
                 World = world;
-                Action = default;
+                Action = -1;
                 Mode = Type.Start;
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public Node(int parent, TAction action)
+            public Node(int parent, int action)
             {
                 Parent = parent;
                 Action = action;
@@ -47,7 +46,7 @@ namespace Enderlook.GOAP
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public Node(int parent, TAction action, int goals, TWorld world)
+            public Node(int parent, int action, int goals, TWorldState world)
             {
                 Parent = parent;
                 Action = action;
@@ -60,12 +59,12 @@ namespace Enderlook.GOAP
             {
                 Mode |= Type.WasDequeued;
 #if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-                if (RuntimeHelpers.IsReferenceOrContainsReferences<TWorld>())
+                if (RuntimeHelpers.IsReferenceOrContainsReferences<TWorldState>())
 #endif
                     World = default;
             }
 
-            public string ToLogText(PlanBuilder<TWorld, TGoal, TAction> planBuilder, int id)
+            public string ToLogText(PlanBuilder<TWorldState, TGoal> planBuilder, int id)
             {
                 StringBuilder builder = planBuilder.builder;
                 int initialLength = builder.Length;
@@ -73,7 +72,7 @@ namespace Enderlook.GOAP
                     .Append("(I:").Append(id)
                     .Append(" P:").Append(Parent)
                     .Append(" T:").Append(Mode.ToString())
-                    .Append(" A:").Append(Action?.ToString() ?? "<>")
+                    .Append(" A:").Append(Action == -1 ? "<>" : planBuilder.actionsText[Action])
                     .Append(" M:").Append(World?.ToString() ?? "<>")
                     .Append(" G:");
                 if (Mode == Type.End)

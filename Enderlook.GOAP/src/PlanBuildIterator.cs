@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
@@ -13,11 +14,16 @@ namespace Enderlook.GOAP
         where TGoal : IGoal<TWorldState>
         where TWatchdog : IWatchdog
     {
+        private const int GROW_FACTOR = 2;
+        private const int INITIAL_CAPACITY = 16;
+
         private TAgent agent;
-        private PlanBuilder<TWorldState, TGoal, TAction>? builder;
+        private PlanBuilder<TWorldState, TGoal>? builder;
         private TWatchdog watchdog;
         private Stack<TAction> actions;
-        private IEnumerator<TAction>? availableActions;
+
+        private Array? availableActions;
+        private int availableActionsCount;
 
         public PlanBuildIterator(TAgent agent, Stack<TAction> actions, TWatchdog watchdog, Action<string>? log = null)
         {
@@ -37,9 +43,10 @@ namespace Enderlook.GOAP
             this.agent = agent;
             this.actions = actions;
             this.watchdog = watchdog;
-            builder = Pool<PlanBuilder<TWorldState, TGoal, TAction>>.Get();
+            builder = Pool<PlanBuilder<TWorldState, TGoal>>.Get();
             builder.log = log;
             availableActions = default;
+            availableActionsCount = 0;
 
             [DoesNotReturn]
             static void ThrowNullAgentException() => throw new ArgumentNullException(nameof(agent));
@@ -55,9 +62,16 @@ namespace Enderlook.GOAP
         {
             if (builder is null)
                 return;
+
             builder.Clear(agent);
-            Pool<PlanBuilder<TWorldState, TGoal, TAction>>.Return(builder);
+            Pool<PlanBuilder<TWorldState, TGoal>>.Return(builder);
             builder = null;
+
+            Debug.Assert(availableActions is not null);
+#if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+            if (RuntimeHelpers.IsReferenceOrContainsReferences<TAction>())
+#endif
+                Array.Clear(availableActions, 0, availableActionsCount);
         }
 
         public static PlanResult RunAndDispose(TAgent agent, Stack<TAction> plan, TWatchdog watchdog, out TGoal? goal, out float cost, Action<string>? log = null)
@@ -84,32 +98,45 @@ namespace Enderlook.GOAP
         public PlanResult Finalize(out TGoal? goal, out float cost)
         {
             Debug.Assert(builder is not null, "Is disposed.");
-            return builder.Finalize<TAgent, TLog>(actions, out goal, out cost);
+            Debug.Assert(availableActions is not null, "Initialize method was not called.");
+            return builder.Finalize<TAgent, TAction, TLog>(availableActions, actions, out goal, out cost);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool MoveNext()
         {
+            PlanBuilder<TWorldState, TGoal>? builder = this.builder;
             Debug.Assert(builder is not null, "Is disposed.");
+
+            Array? availableActions = this.availableActions;
+            Debug.Assert(availableActions is not null, "Initialize method was not called.");
+
             if (builder.TryDequeue<TAgent, TLog>(out int id, out float currentCost, out int currentGoalIndex, out TWorldState? currentMemory))
             {
+                Debug.Assert(currentMemory is not null);
+
                 if (!watchdog.CanContinue(currentCost))
                 {
                     builder.Cancel<TLog>();
                     return false;
                 }
 
-                Debug.Assert(availableActions is not null, "Initialize method was not called.");
-                while (availableActions.MoveNext())
+                if (unchecked((uint)availableActionsCount >= (uint)availableActions.Length))
                 {
-                    TAction action = availableActions.Current;
+                    Debug.Fail("Index out of range.");
+                    return false;
+                }
+
+                for (int actionIndex = 0; actionIndex < availableActionsCount; actionIndex++)
+                {
+                    TAction action = Utils.Get<TAction>(availableActions, actionIndex);
 
                     if (Toggle.IsOn<TLog>())
                     {
                         builder.AppendToLog(" - Check with action: ");
-                        builder.AppendToLog(action.ToString());
+                        builder.AppendToLog(action.ToString() ?? "<Null>");
                         builder.AppendToLog(" ");
-                        builder.AppendToLog(currentMemory.ToString());
+                        builder.AppendToLog(currentMemory.ToString() ?? "<Null>");
                         builder.AppendToLog(" -> ");
                     }
 
@@ -121,14 +148,14 @@ namespace Enderlook.GOAP
                     action.ApplyEffect(newMemory);
 
                     if (Toggle.IsOn<TLog>())
-                        builder.AppendToLog(newMemory.ToString());
+                        builder.AppendToLog(newMemory.ToString() ?? "<Null>");
 
-                    PlanBuilder<TWorldState, TGoal, TAction>.GoalNode currentGoal = builder.GetGoal(currentGoalIndex);
+                    PlanBuilder<TWorldState, TGoal>.GoalNode currentGoal = builder.GetGoal(currentGoalIndex);
 
                     if (Toggle.IsOn<TLog>())
                     {
                         builder.AppendToLog(". And goal: ");
-                        builder.AppendToLog(currentGoal.Goal.ToString());
+                        builder.AppendToLog(currentGoal.Goal.ToString() ?? "<Null>");
                     }
 
                     switch (currentGoal.Goal.CheckAndTrySatisfy(currentMemory, newMemory))
@@ -142,12 +169,12 @@ namespace Enderlook.GOAP
                             if (action.TryGetRequiredGoal(out TGoal requiredGoal))
                             {
                                 int newGoals = currentGoal.WithReplacement(builder, requiredGoal);
-                                builder.Enqueue<TLog>(id, action, newCost, newGoals, newMemory);
+                                builder.Enqueue<TLog>(id, actionIndex, newCost, newGoals, newMemory);
                             }
                             else if (currentGoal.WithPop(out int newGoals))
-                                builder.Enqueue<TLog>(id, action, newCost, newGoals, newMemory);
+                                builder.Enqueue<TLog>(id, actionIndex, newCost, newGoals, newMemory);
                             else
-                                FoundValidPath(ref this, id, newCost, action, newMemory);
+                                FoundValidPath(ref this, id, newCost, actionIndex, newMemory);
 
                             break;
                         }
@@ -159,11 +186,11 @@ namespace Enderlook.GOAP
                             float newCost = currentCost + action.GetCost();
                             if (action.TryGetRequiredGoal(out TGoal requiredGoal))
                             {
-                                int newGoals = PlanBuilder<TWorldState, TGoal, TAction>.GoalNode.WithPush(builder, currentGoalIndex, requiredGoal);
-                                builder.Enqueue<TLog>(id, action, newCost, newGoals, newMemory);
+                                int newGoals = PlanBuilder<TWorldState, TGoal>.GoalNode.WithPush(builder, currentGoalIndex, requiredGoal);
+                                builder.Enqueue<TLog>(id, actionIndex, newCost, newGoals, newMemory);
                             }
                             else
-                                builder.Enqueue<TLog>(id, action, newCost, currentGoalIndex, newMemory);
+                                builder.Enqueue<TLog>(id, actionIndex, newCost, currentGoalIndex, newMemory);
                             break;
                         }
                         case SatisfactionResult.NotProgressed:
@@ -182,8 +209,6 @@ namespace Enderlook.GOAP
                     }
                 }
 
-                availableActions.Reset();
-
                 if (typeof(IWorldStatePool<TWorldState>).IsAssignableFrom(typeof(TAgent)))
                     ((IWorldStatePool<TWorldState>)agent).Return(currentMemory);
 
@@ -192,10 +217,11 @@ namespace Enderlook.GOAP
 
             return false;
 
-            static void FoundValidPath(ref PlanBuildIterator<TAgent, TWorldState, TAction, TGoal, TWatchdog, TLog> self, int id, float cost, TAction action, TWorldState newMemory)
+            static void FoundValidPath(ref PlanBuildIterator<TAgent, TWorldState, TAction, TGoal, TWatchdog, TLog> self, int id, float cost, int action, TWorldState newMemory)
             {
                 if (typeof(IWorldStatePool<TWorldState>).IsAssignableFrom(typeof(TAgent)))
                     ((IWorldStatePool<TWorldState>)self.agent).Return(newMemory);
+                Debug.Assert(self.builder is not null, "Is disposed.");
                 self.builder.EnqueueValidPath<TLog>(id, action, cost);
             }
 
@@ -205,45 +231,82 @@ namespace Enderlook.GOAP
 
         private void GetActions()
         {
-            availableActions = agent.GetActions();
-            try
+            Debug.Assert(builder is not null, "Is disposed.");
+            Debug.Assert(availableActionsCount == 0);
+            Debug.Assert(availableActions is null);
+
+            using IEnumerator<TAction>? actions = agent.GetActions();
+
+            if (actions is null)
             {
-                if (availableActions is null)
+                if (Toggle.IsOn<TLog>())
+                    builder.AppendAndLog("Error: actions is null.");
+                ThrowActionsIsNullException();
+            }
+
+            availableActions = typeof(TAction).IsValueType ? ArrayPool<TAction>.Shared.Rent(INITIAL_CAPACITY) : ArrayPool<object>.Shared.Rent(INITIAL_CAPACITY);
+
+            while (actions.MoveNext())
+            {
+                TAction current = actions.Current;
+
+                if (current is null)
+                    ThrowActionIsNullException();
+
+                if (unchecked((uint)availableActionsCount <= (uint)availableActions.Length))
                 {
-                    if (Toggle.IsOn<TLog>())
-                        builder.AppendAndLog("Error: actions is null.");
-                    ThrowActionsIsNullException();
+                    Array newArray = typeof(TAction).IsValueType ? ArrayPool<TAction>.Shared.Rent(availableActions.Length * GROW_FACTOR) : ArrayPool<object>.Shared.Rent(availableActions.Length * GROW_FACTOR);
+                    Array.Copy(availableActions, newArray, availableActions.Length);
+
+#if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+                    if (RuntimeHelpers.IsReferenceOrContainsReferences<TAction>())
+#endif
+                        Array.Clear(availableActions, 0, availableActions.Length);
+
+                    if (typeof(TAction).IsValueType)
+                        ArrayPool<TAction>.Shared.Return(Unsafe.As<TAction[]>(availableActions));
+                    else
+                        ArrayPool<object>.Shared.Return(Unsafe.As<object[]>(availableActions));
+
+                    availableActions = newArray;
                 }
+
+                Utils.Set(availableActions, availableActionsCount++, current);
 
                 if (Toggle.IsOn<TLog>())
-                {
-                    builder.AppendToLog("Actions:");
-                    bool has = false;
-                    while (availableActions.MoveNext())
-                    {
-                        has = true;
-                        builder.AppendToLog("\n - ");
-                        builder.AppendToLog(availableActions.Current.ToString());
-                    }
-                    if (!has)
-                        builder.AppendToLog("\n - <>");
-                    builder.Log();
-                    availableActions.Reset();
-                }
-
-                if (!availableActions.MoveNext())
-                {
-                    if (Toggle.IsOn<TLog>())
-                        builder.AppendAndLog("Error: actions is empty.");
-                    ThrowActionsIsEmptyException();
-                }
-
-                availableActions.Reset();
+                    builder.AddActionText(current.ToString() ?? "<Null>");
             }
-            catch
+
+            if (Toggle.IsOn<TLog>())
             {
-                availableActions.Dispose();
-                throw;
+                if (unchecked((uint)availableActionsCount >= availableActions.Length))
+                {
+                    Debug.Fail("Index out of range.");
+                    return;
+                }
+
+                builder.AppendToLog("Actions (");
+                builder.AppendToLog(availableActionsCount);
+                builder.AppendToLog("):");
+
+                if (availableActionsCount == 0)
+                    builder.AppendAndLog("\n - <>");
+                else
+                {
+                    for (int i = 0; i < availableActionsCount; i++)
+                    {
+                         builder.AppendToLog("\n - ");
+                         builder.AppendToLog(Utils.Get<TAction>(availableActions, i).ToString() ?? "<Null>");
+                    }
+                    builder.Log();
+                }
+            }
+
+            if (availableActionsCount == 0)
+            {
+                if (Toggle.IsOn<TLog>())
+                    builder.AppendAndLog("Error: actions is empty.");
+                ThrowActionsIsEmptyException();
             }
 
             [DoesNotReturn]
@@ -251,10 +314,15 @@ namespace Enderlook.GOAP
 
             [DoesNotReturn]
             static void ThrowActionsIsNullException() => throw new InvalidOperationException("Actions can't be null.");
+
+            [DoesNotReturn]
+            static void ThrowActionIsNullException() => throw new InvalidOperationException("Action can't be null.");
         }
 
         private void EnqueueGoals()
         {
+            Debug.Assert(builder is not null, "Is disposed.");
+
             TWorldState memory = agent.GetWorldState();
 
             if (memory is null)
@@ -267,7 +335,7 @@ namespace Enderlook.GOAP
             if (Toggle.IsOn<TLog>())
             {
                 builder.AppendToLog("Start planning. Initial memory ");
-                builder.AppendAndLog(memory.ToString());
+                builder.AppendAndLog(memory.ToString() ?? "<Nulll>");
             }
 
             using IEnumerator<TGoal> goals = agent.GetGoals();
@@ -277,22 +345,6 @@ namespace Enderlook.GOAP
                 if (Toggle.IsOn<TLog>())
                     builder.AppendAndLog("Error: goals is null.");
                 ThrowGoalsIsNullException();
-            }
-
-            if (Toggle.IsOn<TLog>())
-            {
-                builder.AppendToLog("Goals:");
-                bool has = false;
-                while (goals.MoveNext())
-                {
-                    has = true;
-                    builder.AppendToLog("\n - ");
-                    builder.AppendToLog(goals.Current.ToString());
-                }
-                if (!has)
-                    builder.AppendToLog("\n - <>");
-                builder.Log();
-                goals.Reset();
             }
 
             if (!goals.MoveNext())
@@ -309,12 +361,19 @@ namespace Enderlook.GOAP
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             void EnqueueGoal(ref PlanBuildIterator<TAgent, TWorldState, TAction, TGoal, TWatchdog, TLog> self)
             {
+                Debug.Assert(self.builder is not null, "Is disposed.");
+
+                TGoal current = goals.Current;
+                if (current is null)
+                    ThrowGoalIsNullException();
+
                 TWorldState newMemory;
                 if (typeof(IWorldStatePool<TWorldState>).IsAssignableFrom(typeof(TAgent)))
                     newMemory = ((IWorldStatePool<TWorldState>)self.agent).Clone(memory);
                 else
                     newMemory = memory.Clone();
-                self.builder.EnqueueGoal<TLog>(goals.Current, newMemory);
+
+                self.builder.EnqueueGoal<TLog>(current, newMemory);
             }
 
             [DoesNotReturn]
@@ -325,6 +384,9 @@ namespace Enderlook.GOAP
 
             [DoesNotReturn]
             static void ThrowGoalsIsNullException() => throw new InvalidOperationException("Goals can't be null.");
+
+            [DoesNotReturn]
+            static void ThrowGoalIsNullException() => throw new InvalidOperationException("Goals can't be null.");
         }
     }
 }

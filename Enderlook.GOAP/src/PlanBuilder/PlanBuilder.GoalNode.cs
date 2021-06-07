@@ -2,7 +2,7 @@
 
 namespace Enderlook.GOAP
 {
-    internal sealed partial class PlanBuilder<TWorld, TGoal, TAction>
+    internal sealed partial class PlanBuilder<TWorldState, TGoal>
     {
         public readonly struct GoalNode
         {
@@ -17,7 +17,7 @@ namespace Enderlook.GOAP
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public static int WithPush(PlanBuilder<TWorld, TGoal, TAction> builder, int currentIndex, TGoal goal)
+            public static int WithPush(PlanBuilder<TWorldState, TGoal> builder, int currentIndex, TGoal goal)
             {
                 int id = builder.goals.Count;
                 builder.goals.Add(new(goal, currentIndex));
@@ -41,7 +41,7 @@ namespace Enderlook.GOAP
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public int WithReplacement(PlanBuilder<TWorld, TGoal, TAction> builder, TGoal goal)
+            public int WithReplacement(PlanBuilder<TWorldState, TGoal> builder, TGoal goal)
             {
                 int id = builder.goals.Count;
                 builder.goals.Add(new(goal, Previous));
@@ -49,7 +49,7 @@ namespace Enderlook.GOAP
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public static int Create(PlanBuilder<TWorld, TGoal, TAction> builder, TGoal goal)
+            public static int Create(PlanBuilder<TWorldState, TGoal> builder, TGoal goal)
             {
                 int id = builder.goals.Count;
                 builder.goals.Add(new(goal, -1));

@@ -2,7 +2,6 @@
 using System.Buffers;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using System.Threading;
 
 namespace Enderlook.GOAP
@@ -31,12 +30,7 @@ namespace Enderlook.GOAP
             else
             {
                 Debug.Assert(index >= 0 && index < pool_.Length);
-#if NET5_0_OR_GREATER
-                ref object slot = ref Unsafe.Add(ref MemoryMarshal.GetArrayDataReference(pool_), index--);
-#else
-                ref object slot = ref pool_[index--];
-#endif
-
+                ref object slot = ref Utils.Ref(pool_, index--);
                 item = Unsafe.As<T>(slot);
                 slot = null!;
             }
@@ -54,11 +48,7 @@ namespace Enderlook.GOAP
             if (unchecked((uint)index >= (uint)pool_.Length))
                 SlowPath();
 
-#if NET5_0_OR_GREATER
-            Unsafe.Add(ref MemoryMarshal.GetArrayDataReference(pool_), ++index) = item;
-#else
-            pool_[++index] = item;
-#endif
+            Utils.Set<object>(pool_, ++index, item);
 
             pool = pool_;
 
@@ -67,13 +57,7 @@ namespace Enderlook.GOAP
             {
                 object[] newPool = ArrayPool<object>.Shared.Rent(pool_.Length * GROW_FACTOR);
                 Array.Copy(pool_, newPool, pool_.Length);
-
-#if NET5_0_OR_GREATER
-                Unsafe.Add(ref MemoryMarshal.GetArrayDataReference(newPool), ++index) = item;
-#else
-                newPool[++index] = item;
-#endif
-
+                Utils.Set<object>(pool_, ++index, item);
                 pool = pool_;
             }
         }
