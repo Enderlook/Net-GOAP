@@ -8,10 +8,11 @@ namespace Enderlook.GOAP
         internal struct Yes { }
         internal struct No { }
 
+        // AggrssiveInlining is very important here for constant propagation.
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool IsOn<T>()
         {
-            Debug.Assert(typeof(T) == typeof(Yes) || typeof(T) == typeof(No));
+            Assert<T>();
             return typeof(T) == typeof(Yes);
         }
 
