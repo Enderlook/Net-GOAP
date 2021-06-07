@@ -1,5 +1,8 @@
-﻿using System;
+﻿using Enderlook.Collections.LowLevel;
+
+using System;
 using System.Runtime.CompilerServices;
+using System.Text;
 
 namespace Enderlook.GOAP
 {
@@ -63,8 +66,9 @@ namespace Enderlook.GOAP
 
             public string ToLogText(PlanBuilder<TWorld, TGoal, TAction> planBuilder, int id)
             {
-                int initialLength = planBuilder.builder.Length;
-                planBuilder.builder
+                StringBuilder builder = planBuilder.builder;
+                int initialLength = builder.Length;
+                builder
                     .Append("(I:").Append(id)
                     .Append(" P:").Append(Parent)
                     .Append(" T:").Append(Mode.ToString())
@@ -72,22 +76,23 @@ namespace Enderlook.GOAP
                     .Append(" M:").Append(World?.ToString() ?? "<>")
                     .Append(" G:");
                 if (Mode == Type.End)
-                    planBuilder.builder.Append("<>");
+                    builder.Append("<>");
                 else
                 {
-                    planBuilder.builder.Append('[');
-                    GoalNode node = planBuilder.goals[Goals];
-                    planBuilder.builder.Append(node.Goal.ToString());
+                    builder.Append('[');
+                    RawList<GoalNode> goals = planBuilder.goals;
+                    GoalNode node = goals[Goals];
+                    builder.Append(node.Goal.ToString());
                     while (node.Previous != -1)
                     {
-                        node = planBuilder.goals[node.Previous];
-                        planBuilder.builder.Append(node.Goal.ToString());
+                        node = goals[node.Previous];
+                        builder.Append(node.Goal.ToString());
                     }
-                    planBuilder.builder.Append(']');
+                    builder.Append(']');
                 }
-                planBuilder.builder.Append(')');
-                string text = planBuilder.builder.ToString(initialLength, planBuilder.builder.Length - initialLength);
-                planBuilder.builder.Length = initialLength;
+                builder.Append(')');
+                string text = builder.ToString(initialLength, builder.Length - initialLength);
+                builder.Length = initialLength;
                 return text;
             }
         }

@@ -45,7 +45,7 @@ namespace Enderlook.GOAP
             if (Toggle.IsOn<TLog>())
             {
                 nodesText.Add(node.ToLogText(this, count));
-                AppendToLog(count);
+                builder.Append(nodesText[count]);
                 Log();
             }
         }
@@ -100,7 +100,7 @@ namespace Enderlook.GOAP
                 if (Toggle.IsOn<TLog>())
                 {
                     builder.Append("Dequeue Success: ");
-                    AppendToLog(id);
+                    builder.Append(nodesText[id]);
                     Log();
                 }
 
@@ -168,8 +168,13 @@ namespace Enderlook.GOAP
             { 
                 builder.Append("Finalized: ");
                 AppendToLog(endNode);
-                Log();
+                builder.Append("\nTotal cost of plan ").Append(cost).Append('.');
+                builder.Append("\nTotal actions enqueued: ").Append(nodes.Count).Append('.');
+                builder.Append("\nTotal goals stored: ").Append(goals.Count).Append('.');
+                builder.Append("\nRemaining nodes to visit: ").Append(toVisit.Count).Append('.');
             }
+
+            int actionsCount = actions.Count;
 
             int index = endNode;
             int lastIndex = index;
@@ -184,6 +189,12 @@ namespace Enderlook.GOAP
                 }
                 lastIndex = index;
                 actions.Push(node.Action!);
+            }
+
+            if (Toggle.IsOn<TLog>())
+            {
+                builder.Append("\nLength of plan ").Append(actions.Count - actionsCount).Append('.');
+                Log();
             }
 
             Clear<Toggle.Yes>(lastIndex);
@@ -242,6 +253,7 @@ namespace Enderlook.GOAP
                 node = nodes[id];
                 builder.Append(" -> ").Append(nodesText[id]);
             }
+            builder.Append('.');
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
