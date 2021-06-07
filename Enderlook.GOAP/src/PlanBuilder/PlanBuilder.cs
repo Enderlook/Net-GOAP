@@ -10,7 +10,7 @@ using System.Text;
 
 namespace Enderlook.GOAP
 {
-    internal sealed class PlanBuilder<TWorld, TGoal, TAction>
+    internal sealed partial class PlanBuilder<TWorld, TGoal, TAction>
         where TWorld : IWorldState<TWorld>
         where TGoal : IGoal<TWorld>
         where TAction : IAction<TWorld, TGoal>
@@ -84,6 +84,9 @@ namespace Enderlook.GOAP
                 builder.Append("Enqueue: ");
             Enqueue<TLog>(new(parent, action, GoalNode.Create(this, goal), world), cost);
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public GoalNode GetGoal(int index) => goals[index];
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal bool TryDequeue<TAgent, TLog>(out int id, out float cost, out int goals, [MaybeNullWhen(false)] out TWorld world)
@@ -257,148 +260,5 @@ namespace Enderlook.GOAP
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void AppendToLog(string message) => builder.Append(message);
-
-        private struct Node
-        {
-            public int Parent;
-            public TAction? Action;
-            public int Goals;
-            public TWorld? World;
-            public Type Mode;
-
-            [Flags]
-            public enum Type : byte
-            {
-                Normal = 1 << 1,
-                Start = 1 << 2,
-                End = 1 << 3,
-                WasDequeued = 1 << 4,
-            }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public Node(int goals, TWorld world)
-            {
-                Parent = -1;
-                Goals = goals;
-                World = world;
-                Action = default;
-                Mode = Type.Start;
-            }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public Node(int parent, TAction action)
-            {
-                Parent = parent;
-                Action = action;
-                Goals = default;
-                World = default;
-                Mode = Type.End;
-            }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public Node(int parent, TAction action, int goals, TWorld world)
-            {
-                Parent = parent;
-                Action = action;
-                Goals = goals;
-                World = world;
-                Mode = Type.Normal;
-            }
-
-            public void WasDequeue()
-            {
-                Mode |= Type.WasDequeued;
-#if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-                if (RuntimeHelpers.IsReferenceOrContainsReferences<TWorld>())
-#endif
-                    World = default;
-            }
-
-            public string ToLogText(PlanBuilder<TWorld, TGoal, TAction> planBuilder, int id)
-            {
-                int initialLength = planBuilder.builder.Length;
-                planBuilder.builder
-                    .Append("(I:").Append(id)
-                    .Append(" P:").Append(Parent)
-                    .Append(" T:").Append(Mode.ToString())
-                    .Append(" A:").Append(Action?.ToString() ?? "<>")
-                    .Append(" M:").Append(World?.ToString() ?? "<>")
-                    .Append(" G:");
-                if (Mode == Type.End)
-                    planBuilder.builder.Append("<>");
-                else
-                {
-                    planBuilder.builder.Append('[');
-                    GoalNode node = planBuilder.goals[Goals];
-                    planBuilder.builder.Append(node.Goal.ToString());
-                    while (node.Previous != -1)
-                    {
-                        node = planBuilder.goals[node.Previous];
-                        planBuilder.builder.Append(node.Goal.ToString());
-                    }
-                    planBuilder.builder.Append(']');
-                }
-                planBuilder.builder.Append(')');
-                string text = planBuilder.builder.ToString(initialLength, planBuilder.builder.Length - initialLength);
-                planBuilder.builder.Length = initialLength;
-                return text;
-            }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public GoalNode GetGoal(int index) => goals[index];
-
-        public readonly struct GoalNode
-        {
-            public readonly TGoal Goal;
-            public readonly int Previous;
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            private GoalNode(TGoal goal, int previous)
-            {
-                Goal = goal;
-                Previous = previous;
-            }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public static int WithPush(PlanBuilder<TWorld, TGoal, TAction> builder, int currentIndex, TGoal goal)
-            {
-                int id = builder.goals.Count;
-                builder.goals.Add(new(goal, currentIndex));
-                return id;
-            }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public bool WithPop(out int index)
-            {
-                if (Previous == -1)
-                {
-#if NET5_0_OR_GREATER
-                    Unsafe.SkipInit(out index);
-#else
-                    index = default;
-#endif
-                    return false;
-                }
-                index = Previous;
-                return true;
-            }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public int WithReplacement(PlanBuilder<TWorld, TGoal, TAction> builder, TGoal goal)
-            {
-                int id = builder.goals.Count;
-                builder.goals.Add(new(goal, Previous));
-                return id;
-            }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public static int Create(PlanBuilder<TWorld, TGoal, TAction> builder, TGoal goal)
-            {
-                int id = builder.goals.Count;
-                builder.goals.Add(new(goal, -1));
-                return id;
-            }
-        }
     }
 }
