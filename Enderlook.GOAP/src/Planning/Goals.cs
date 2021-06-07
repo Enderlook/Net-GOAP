@@ -57,39 +57,32 @@ namespace Enderlook.GOAP
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool TryMoveNext(ref int index, out TGoal goal)
+        public TGoal Peek()
         {
             if (array is null)
-            {
-                goal = single!;
-                return false;
-            }
-            goal = Unsafe.As<TGoal[]>(array)[index++];
-            return unchecked((uint)index < (uint)count);
+                return single!;
+            return Unsafe.As<TGoal[]>(array)[count - 1];
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Goals<TWorld, TGoal> WithReplacement(int index, TGoal goal)
+        public Goals<TWorld, TGoal> WithReplacement(TGoal goal)
         {
             if (array is null)
-            {
-                Debug.Assert(index == 0);
                 return new Goals<TWorld, TGoal>(goal);
-            }
 
-            index--; // This is because TryMoveNext increments index after access.
+            Debug.Assert(count > 1);
             Array array_ = Rent(count);
-            Array.Copy(array, array_, count);
-            Unsafe.As<TGoal[]>(array_)[index] = goal;
+            int countMinusOne = count - 1;
+            Array.Copy(array, array_, countMinusOne);
+            Unsafe.As<TGoal[]>(array_)[countMinusOne] = goal;
             return new(array_, count);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool Without(int index, out Goals<TWorld, TGoal> goals)
+        public bool WithPop(out Goals<TWorld, TGoal> goals)
         {
             if (array is null)
             {
-                Debug.Assert(index == 0);
 #if NET5_0_OR_GREATER
                 Unsafe.SkipInit(out goals);
 #else
@@ -102,22 +95,19 @@ namespace Enderlook.GOAP
             if (newCount > 1)
             {
                 Array array_ = Rent(newCount);
-                Array.Copy(array, array_, index);
-                if (index < newCount)
-                    Array.Copy(array, index + 1, array_, index, newCount - index);
+                Array.Copy(array, array_, newCount);
                 goals = new(array_, newCount);
             }
             else
             {
                 Debug.Assert(count == 2);
-                Debug.Assert(index == 0 || index == 1);
-                goals = new(Unsafe.As<TGoal[]>(array)[1 - index]);
+                goals = new(Unsafe.As<TGoal[]>(array)[0]);
             }
             return true;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Goals<TWorld, TGoal> WithAdd<TAgent, TAction>(TAgent agent, TGoal goal)
+        public Goals<TWorld, TGoal> WithPush<TAgent, TAction>(TAgent agent, TGoal goal)
             where TAgent : IAgent<TWorld, TGoal, TAction>
             where TAction : IAction<TWorld, TGoal>
         {

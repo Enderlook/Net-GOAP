@@ -162,86 +162,63 @@ namespace Enderlook.GOAP
                     if (Toggle.IsOn<TLog>())
                         builder.AppendAndLog(newMemory.ToString());
 
-                    bool shallReturnNewMemory;
-                    bool canContinue;
-                    bool hasProgressed = false;
-                    int index = 0;
-                    do
+                    TGoal currentGoal = currentGoals.Peek();
+
+                    if (Toggle.IsOn<TLog>())
                     {
-                        int currentIndex = index;
-                        canContinue = currentGoals.TryMoveNext(ref index, out TGoal currentGoal);
+                        builder.AppendToLog("   - Check goal: ");
+                        builder.AppendToLog(currentGoal.ToString());
+                    }
 
-                        if (Toggle.IsOn<TLog>())
+                    switch (currentGoal.CheckAndTrySatisfy(currentMemory, newMemory))
+                    {
+                        case SatisfactionResult.Satisfied:
                         {
-                            builder.AppendToLog("   - Check goal: ");
-                            builder.AppendToLog(currentGoal.ToString());
-                        }
+                            if (Toggle.IsOn<TLog>())
+                                builder.AppendToLog(". Satisfied.\n     ");
 
-                        switch (currentGoal.CheckAndTrySatisfy(currentMemory, newMemory))
+                            float newCost = currentCost + action.GetCost();
+                            if (action.TryGetRequiredGoal(out TGoal requiredGoal))
+                            {
+                                Goals<TWorld, TGoal> newGoals = currentGoals.WithReplacement(requiredGoal);
+                                builder.Enqueue<TLog>(id, action, newCost, newGoals, newMemory);
+                            }
+                            else if (currentGoals.WithPop(out Goals<TWorld, TGoal> newGoals))
+                                builder.Enqueue<TLog>(id, action, newCost, newGoals, newMemory);
+                            else
+                                FoundValidPath(id, newCost, action, newMemory);
+
+                            break;
+                        }
+                        case SatisfactionResult.Progressed:
                         {
-                            case SatisfactionResult.Satisfied:
+                            if (Toggle.IsOn<TLog>())
+                                builder.AppendToLog(". Progressed.\n     ");
+
+                            float newCost = currentCost + action.GetCost();
+                            if (action.TryGetRequiredGoal(out TGoal requiredGoal))
                             {
-                                if (Toggle.IsOn<TLog>())
-                                    builder.AppendToLog(". Satisfied.\n     ");
-
-                                shallReturnNewMemory = true;
-                                TWorld newMemory_ = newMemory;
-                                newMemory = Clone(currentMemory);
-                                action.ApplyEffect(newMemory);
-
-                                float newCost = currentCost + action.GetCost();
-                                if (action.TryGetRequiredGoal(out TGoal requiredGoal))
-                                {
-                                    Goals<TWorld, TGoal> newGoals = currentGoals.WithReplacement(index, requiredGoal);
-                                    builder.Enqueue<TLog>(id, action, newCost, newGoals, newMemory_);
-                                }
-                                else if (currentGoals.Without(currentIndex, out Goals<TWorld, TGoal> newGoals))
-                                    builder.Enqueue<TLog>(id, action, newCost, newGoals, newMemory_);
-                                else
-                                    FoundValidPath(id, newCost, action, newMemory_);
-                                break;
+                                Goals<TWorld, TGoal> newGoals = currentGoals.WithPush<TAgent, TAction>(agent, requiredGoal);
+                                builder.Enqueue<TLog>(id, action, newCost, newGoals, newMemory);
                             }
-                            case SatisfactionResult.Progressed:
-                            {
-                                if (Toggle.IsOn<TLog>())
-                                    builder.AppendToLog(". Progressed.\n     ");
-
-                                if (hasProgressed)
-                                {
-                                    shallReturnNewMemory = true;
-                                    break;
-                                }
-
-                                hasProgressed = true;
-                                shallReturnNewMemory = false;
-
-                                float newCost = currentCost + action.GetCost();
-                                if (action.TryGetRequiredGoal(out TGoal requiredGoal))
-                                {
-                                    Goals<TWorld, TGoal> newGoals = currentGoals.WithAdd<TAgent, TAction>(agent, requiredGoal);
-                                    builder.Enqueue<TLog>(id, action, newCost, newGoals, newMemory);
-                                }
-                                else
-                                    builder.Enqueue<TLog>(id, action, newCost, currentGoals, newMemory);
-                                break;
-                            }
-                            case SatisfactionResult.NotProgressed:
-                            {
-                                if (Toggle.IsOn<TLog>())
-                                    builder.AppendAndLog(". Not progressed.");
-                                shallReturnNewMemory = true;
-                                break;
-                            }
-                            default:
-                            {
-                                ThrowInvalidSatisfactionResultException();
-                                break;
-                            }
+                            else
+                                builder.Enqueue<TLog>(id, action, newCost, currentGoals, newMemory);
+                            break;
                         }
-                    } while (canContinue);
-
-                    if (shallReturnNewMemory && typeof(IWorldStatePool<TWorld>).IsAssignableFrom(typeof(TAgent)))
-                        ((IWorldStatePool<TWorld>)agent).Return(newMemory);
+                        case SatisfactionResult.NotProgressed:
+                        {
+                            if (Toggle.IsOn<TLog>())
+                                builder.AppendAndLog(". Not progressed.");
+                            if (typeof(IWorldStatePool<TWorld>).IsAssignableFrom(typeof(TAgent)))
+                                ((IWorldStatePool<TWorld>)agent).Return(newMemory);
+                            break;
+                        }
+                        default:
+                        {
+                            ThrowInvalidSatisfactionResultException();
+                            break;
+                        }
+                    }
                 }
 
                 availableActions.Reset();
