@@ -5,19 +5,19 @@ namespace Enderlook.GOAP
     /// <summary>
     /// Describes an agent.
     /// </summary>
-    /// <typeparam name="TMemory">Type of memory.</typeparam>
+    /// <typeparam name="TWorldState">Type of world state.</typeparam>
     /// <typeparam name="TGoal">Type of goal.</typeparam>
     /// <typeparam name="TAction">Type of action.</typeparam>
-    public interface IAgent<TMemory, TGoal, TAction>
-        where TMemory : IWorldState<TMemory>
-        where TGoal : IGoal<TMemory>
-        where TAction : IAction<TMemory, TGoal>
+    public interface IAgent<TWorldState, TGoal, TAction>
+        where TWorldState : IWorldState<TWorldState>
+        where TGoal : IGoal<TWorldState>
+        where TAction : IAction<TWorldState, TGoal>
     {
         /// <summary>
         /// Get the current state of the world.
         /// </summary>
         /// <returns>Current state of the world.</returns>
-        TMemory GetWorldState();
+        TWorldState GetWorldState();
 
         /// <summary>
         /// Get all the possible goals that this agent want to complete.
