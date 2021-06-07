@@ -4,19 +4,19 @@ using Enderlook.Collections.LowLevel;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace Enderlook.GOAP
 {
-    internal sealed partial class PlanBuilder<TWorldState, TGoal>
+    internal sealed partial class PlanBuilder<TWorldState, TGoal, TAction>
         where TWorldState : IWorldState<TWorldState>
         where TGoal : IGoal<TWorldState>
     {
-        private RawList<Node> nodes = RawList<Node>.Create();
+        private RawList<PathNode> nodes = RawList<PathNode>.Create();
         private BinaryHeapMin<int, float> toVisit = new();
         private RawList<GoalNode> goals = RawList<GoalNode>.Create();
+        private RawList<TAction> actions = RawList<TAction>.Create();
 
         private State state;
         private int endNode;
@@ -25,7 +25,7 @@ namespace Enderlook.GOAP
         private RawList<string> nodesText = RawList<string>.Create();
         private RawList<string> actionsText = RawList<string>.Create();
         private StringBuilder builder = new();
-        public Action<string>? log;
+        private Action<string>? log;
 
         [Flags]
         private enum State : byte
@@ -36,110 +36,26 @@ namespace Enderlook.GOAP
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void Enqueue<TLog>(Node node, float cost)
+        public void AddAction<TLog>(TAction action)
         {
-            int count = nodes.Count;
-            toVisit.Enqueue(count, cost);
-            nodes.Add(node);
-
+            Debug.Assert(action is not null);
+            Toggle.Assert<TLog>();
+            actions.Add(action);
             if (Toggle.IsOn<TLog>())
-            {
-                nodesText.Add(node.ToLogText(this, count));
-                builder.Append(nodesText[count]);
-                Log();
-            }
+                actionsText.Add(action.ToString() ?? "<Null>");
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal void EnqueueGoal<TLog>(TGoal goal, TWorldState world)
-        {
-            if (Toggle.IsOn<TLog>())
-                builder.Append("Enqueue Goal: ");
-            Enqueue<TLog>(new(GoalNode.Create(this, goal), world), 0);
-        }
+        public int ActionsCount() => actions.Count;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal void EnqueueValidPath<TLog>(int parent, int action, float cost)
-        {
-            if (Toggle.IsOn<TLog>())
-                builder.Append("Enqueue Valid Path: ");
-            endNode = nodes.Count;
-            this.cost = cost;
-            state |= State.Found;
-            Enqueue<TLog>(new(parent, action), cost);
-        }
+        public string GetActionText(int index) => actionsText[index];
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal void Enqueue<TLog>(int parent, int action, float cost, int goals, TWorldState world)
-        {
-            if (Toggle.IsOn<TLog>())
-                builder.Append("Enqueue: ");
-            Enqueue<TLog>(new(parent, action, goals, world), cost);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal void Enqueue<TLog>(int parent, int action, float cost, TGoal goal, TWorldState world)
-        {
-            if (Toggle.IsOn<TLog>())
-                builder.Append("Enqueue: ");
-            Enqueue<TLog>(new(parent, action, GoalNode.Create(this, goal), world), cost);
-        }
+        public TAction GetAction(int index) => actions[index];
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public GoalNode GetGoal(int index) => goals[index];
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal bool TryDequeue<TAgent, TLog>(out int id, out float cost, out int goals, [MaybeNullWhen(false)] out TWorldState world)
-        {
-            Debug.Assert(typeof(TAgent).IsValueType, $"{nameof(TAgent)} must be a value type to constant propagate type checks.");
-
-            if (toVisit.TryDequeue(out id, out cost))
-            {
-                ref Node node = ref nodes[id];
-
-                if (Toggle.IsOn<TLog>())
-                {
-                    builder.Append("Dequeue Success: ");
-                    builder.Append(nodesText[id]);
-                    Log();
-                }
-
-                if (typeof(IWorldStatePool<TWorldState>).IsAssignableFrom(typeof(TAgent)))
-                    node.WasDequeue();
-
-                if (node.Mode == Node.Type.End)
-                {
-                    endNode = id;
-                    this.cost = cost;
-
-#if NET5_0_OR_GREATER
-                    Unsafe.SkipInit(out goals);
-                    Unsafe.SkipInit(out world);
-#else
-                    goals = default;
-                    world = default;
-#endif
-
-                    return false;
-                }
-
-                goals = node.Goals;
-                world = node.World!;
-                return true;
-            }
-
-            if (Toggle.IsOn<TLog>())
-                AppendAndLog("Dequeue Failed. Reason: Empty.");
-
-#if NET5_0_OR_GREATER
-            Unsafe.SkipInit(out goals);
-            Unsafe.SkipInit(out world);
-#else
-            goals = default;
-            world = default;
-#endif
-            return false;
-        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void Cancel<TLog>()
@@ -149,7 +65,7 @@ namespace Enderlook.GOAP
                 AppendAndLog("Cancelled.");
         }
 
-        internal PlanResult Finalize<TAgent, TAction, TLog>(Array actions, Stack<TAction> plan, out TGoal? goal, out float cost)
+        internal PlanResult Finalize<TAgent, TLog>(Stack<TAction> plan, out TGoal? goal, out float cost)
         {
             Debug.Assert(typeof(TAgent).IsValueType, $"{nameof(TAgent)} must be a value type to constant propagate type checks.");
 
@@ -178,7 +94,7 @@ namespace Enderlook.GOAP
             int lastIndex = index;
             while (true)
             {
-                ref Node node = ref nodes[index];
+                ref PathNode node = ref nodes[index];
                 index = node.Parent;
                 if (index == -1)
                 {
@@ -186,7 +102,7 @@ namespace Enderlook.GOAP
                     break;
                 }
                 lastIndex = index;
-                plan.Push(Utils.Get<TAction>(actions, node.Action));
+                plan.Push(actions[node.Action]);
             }
 
             if (Toggle.IsOn<TLog>())
@@ -218,25 +134,25 @@ namespace Enderlook.GOAP
 
                 for (int i = 0; i < nodes.Count; i++)
                 {
-                    Node node = nodes[i];
+                    PathNode node = nodes[i];
                     if (Toggle.IsOn<TIgnore>() && i == ignore)
                     {
-                        Debug.Assert(node.Mode == Node.Type.Start);
+                        Debug.Assert(node.Mode == PathNode.Type.Start);
                         if (poolMemory)
                             ((IWorldStatePool<TWorldState>)agent).Return(node.World!);
                     }
                     else
                     {
-                        if ((node.Mode & Node.Type.WasDequeued) != 0)
+                        if ((node.Mode & PathNode.Type.WasDequeued) != 0)
                             continue;
 
-                        if ((node.Mode & (Node.Type.Start | Node.Type.Normal)) != 0)
+                        if ((node.Mode & (PathNode.Type.Start | PathNode.Type.Normal)) != 0)
                         {
                             if (poolMemory)
                                 ((IWorldStatePool<TWorldState>)agent).Return(node.World!);
                         }
                         else
-                            Debug.Assert((node.Mode & (Node.Type.End)) != 0);
+                            Debug.Assert((node.Mode & (PathNode.Type.End)) != 0);
                     }
                 }
 
@@ -254,42 +170,5 @@ namespace Enderlook.GOAP
                 log = default;
             }
         }
-
-        private void AppendToLogNode(int id)
-        {
-            builder.Append(nodesText[id]);
-            Node node = nodes[id];
-            while (node.Mode != Node.Type.Start)
-            {
-                id = node.Parent;
-                node = nodes[id];
-                builder.Append(" -> ").Append(nodesText[id]);
-            }
-            builder.Append('.');
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Log()
-        {
-            Debug.Assert(log is not null);
-            log(builder.ToString());
-            builder.Clear();
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void AppendAndLog(string message)
-        {
-            builder.Append(message);
-            Log();
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void AppendToLog(string message) => builder.Append(message);
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void AppendToLog(int number) => builder.Append(number);
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void AddActionText(string message) => actionsText.Add(message);
     }
 }

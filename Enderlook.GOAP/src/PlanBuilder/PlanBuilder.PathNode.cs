@@ -6,9 +6,9 @@ using System.Text;
 
 namespace Enderlook.GOAP
 {
-    internal sealed partial class PlanBuilder<TWorldState, TGoal>
+    internal sealed partial class PlanBuilder<TWorldState, TGoal, TAction>
     {
-        private struct Node
+        private struct PathNode
         {
             public int Parent;
             public int Action;
@@ -26,7 +26,7 @@ namespace Enderlook.GOAP
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public Node(int goals, TWorldState world)
+            public PathNode(int goals, TWorldState world)
             {
                 Parent = -1;
                 Goals = goals;
@@ -36,7 +36,7 @@ namespace Enderlook.GOAP
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public Node(int parent, int action)
+            public PathNode(int parent, int action)
             {
                 Parent = parent;
                 Action = action;
@@ -46,7 +46,7 @@ namespace Enderlook.GOAP
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public Node(int parent, int action, int goals, TWorldState world)
+            public PathNode(int parent, int action, int goals, TWorldState world)
             {
                 Parent = parent;
                 Action = action;
@@ -64,7 +64,7 @@ namespace Enderlook.GOAP
                     World = default;
             }
 
-            public string ToLogText(PlanBuilder<TWorldState, TGoal> planBuilder, int id)
+            public string ToLogText(PlanBuilder<TWorldState, TGoal, TAction> planBuilder, int id)
             {
                 StringBuilder builder = planBuilder.builder;
                 int initialLength = builder.Length;
