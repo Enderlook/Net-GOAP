@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Threading;
 
@@ -39,298 +37,70 @@ namespace Enderlook.GOAP
             where TGoal : IGoal<TWorld>
             => Plan<TAgent, TWorld, TAction, TGoal, EndlessWatchdog>(agent, actions, out goal, out cost, new EndlessWatchdog(), log);
 
-        private static PlanResult Plan<TAgent, TWorld, TAction, TGoal, TWatchdog>(
-            TAgent agent, Stack<TAction> actions, out TGoal? goal, out float cost, TWatchdog watchdog, Action<string>? log)
-            where TAgent : IAgent<TWorld, TGoal, TAction>
-            where TWorld : IWorldState<TWorld>
-            where TAction : IAction<TWorld, TGoal>
-            where TGoal : IGoal<TWorld>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static PlanResult Plan<TAgent, TWorldState, TAction, TGoal, TWatchdog>(
+            TAgent agent, Stack<TAction> actions, out TGoal? goal, out float cost, TWatchdog watchdog, Action<string>? log = null)
+            where TAgent : IAgent<TWorldState, TGoal, TAction>
+            where TWorldState : IWorldState<TWorldState>
+            where TAction : IAction<TWorldState, TGoal>
+            where TGoal : IGoal<TWorldState>
             where TWatchdog : IWatchdog
         {
-            if (agent is null)
-                ThrowNullPlanException();
-
-            if (actions is null)
-                ThrowNullActionsException();
-
-            PlanBuilder<TWorld, TGoal, TAction> builder = Pool<PlanBuilder<TWorld, TGoal, TAction>>.Get();
-            PlanResult result;
             if (log is null)
-                result = Plan<TAgent, TWorld, TAction, TGoal, TWatchdog, Toggle.No>(
-                    agent, builder, actions, out goal, out cost, watchdog);
+                return PlanInner<TAgent, TWorldState, TAction, TGoal, TWatchdog, Toggle.No>(agent, actions, out goal, out cost, watchdog, log);
             else
-            {
-                builder.log = log;
-                result = Plan<TAgent, TWorld, TAction, TGoal, TWatchdog, Toggle.Yes>(
-                    agent, builder, actions, out goal, out cost, watchdog);
-            }
-            Pool<PlanBuilder<TWorld, TGoal, TAction>>.Return(builder);
-            return result;
+                return PlanInner<TAgent, TWorldState, TAction, TGoal, TWatchdog, Toggle.Yes>(agent, actions, out goal, out cost, watchdog, log);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static PlanResult Plan<TAgent, TWorld, TAction, TGoal, TWatchdog, TLog>(
-            TAgent agent, PlanBuilder<TWorld, TGoal, TAction> builder, Stack<TAction> actions,
-            out TGoal? goal, out float cost, TWatchdog watchdog)
-            where TAgent : IAgent<TWorld, TGoal, TAction>
-            where TWorld : IWorldState<TWorld>
-            where TAction : IAction<TWorld, TGoal>
-            where TGoal : IGoal<TWorld>
+        private static PlanResult PlanInner<TAgent, TWorldState, TAction, TGoal, TWatchdog, TLog>(
+            TAgent agent, Stack<TAction> actions, out TGoal? goal, out float cost, TWatchdog watchdog, Action<string>? log)
+            where TAgent : IAgent<TWorldState, TGoal, TAction>
+            where TWorldState : IWorldState<TWorldState>
+            where TAction : IAction<TWorldState, TGoal>
+            where TGoal : IGoal<TWorldState>
             where TWatchdog : IWatchdog
         {
-            Debug.Assert(builder is not null);
-
             if (typeof(TAgent).IsValueType)
-                return PlanInner<TAgent, TWorld, TAction, TGoal, TWatchdog, TLog>(builder!, agent, actions, out goal, out cost, watchdog);
+                return PlanBuildIterator<TAgent, TWorldState, TAction, TGoal, TWatchdog, TLog>
+                    .RunAndDispose(agent, actions, watchdog, out goal, out cost, log);
 
 #pragma warning disable HAA0601 // Value type to reference type conversion causing boxing allocation
-            IAgent<TWorld, TGoal, TAction> plan_ = agent;
+            IAgent<TWorldState, TGoal, TAction> agent_ = agent;
 #pragma warning restore HAA0601 // Value type to reference type conversion causing boxing allocation
 
             Type planType = agent.GetType();
             if (typeof(IGoalPool<TGoal>).IsAssignableFrom(planType))
             {
-                if (typeof(IWorldStatePool<TWorld>).IsAssignableFrom(planType))
+                if (typeof(IWorldStatePool<TWorldState>).IsAssignableFrom(planType))
                 {
                     if (typeof(IGoalMerge<TGoal>).IsAssignableFrom(planType))
-                        return PlanInner<AgentWrapperPoolGoalPoolWorldMergeGoal<TWorld, TAction, TGoal>, TWorld, TAction, TGoal, TWatchdog, TLog>(
-                            builder!, new(plan_), actions, out goal, out cost, watchdog);
-                    return PlanInner<AgentWrapperPoolGoalPoolWorld<TWorld, TAction, TGoal>, TWorld, TAction, TGoal, TWatchdog, TLog>(
-                        builder!, new(plan_), actions, out goal, out cost, watchdog);
+                        return PlanBuildIterator<AgentWrapperPoolGoalPoolWorldMergeGoal<TWorldState, TAction, TGoal>, TWorldState, TAction, TGoal, TWatchdog, TLog>
+                            .RunAndDispose(new(agent_), actions, watchdog, out goal, out cost, log);
+                    return PlanBuildIterator<AgentWrapperPoolGoalPoolWorld<TWorldState, TAction, TGoal>, TWorldState, TAction, TGoal, TWatchdog, TLog>
+                        .RunAndDispose(new(agent_), actions, watchdog, out goal, out cost, log);
                 }
                 if (typeof(IGoalMerge<TGoal>).IsAssignableFrom(planType))
-                    return PlanInner<AgentWrapperPoolGoalMergeGoal<TWorld, TAction, TGoal>, TWorld, TAction, TGoal, TWatchdog, TLog>(
-                        builder!, new(plan_), actions, out goal, out cost, watchdog);
-                return PlanInner<AgentWrapperPoolGoal<TWorld, TAction, TGoal>, TWorld, TAction, TGoal, TWatchdog, TLog>(
-                    builder!, new(plan_), actions, out goal, out cost, watchdog);
+                    return PlanBuildIterator<AgentWrapperPoolGoalMergeGoal<TWorldState, TAction, TGoal>, TWorldState, TAction, TGoal, TWatchdog, TLog>
+                        .RunAndDispose(new(agent_), actions, watchdog, out goal, out cost, log);
+                return PlanBuildIterator<AgentWrapperPoolGoal<TWorldState, TAction, TGoal>, TWorldState, TAction, TGoal, TWatchdog, TLog>
+                    .RunAndDispose(new(agent_), actions, watchdog, out goal, out cost, log);
             }
 
-            if (typeof(IWorldStatePool<TWorld>).IsAssignableFrom(planType))
+            if (typeof(IWorldStatePool<TWorldState>).IsAssignableFrom(planType))
             {
                 if (typeof(IGoalMerge<TGoal>).IsAssignableFrom(planType))
-                    return PlanInner<AgentWrapperPoolWorldMergeGoal<TWorld, TAction, TGoal>, TWorld, TAction, TGoal, TWatchdog, TLog>(
-                        builder!, new(plan_), actions, out goal, out cost, watchdog);
-                return PlanInner<AgentWrapperPoolWorld<TWorld, TAction, TGoal>, TWorld, TAction, TGoal, TWatchdog, TLog>(
-                    builder!, new(plan_), actions, out goal, out cost, watchdog);
+                    return PlanBuildIterator<AgentWrapperPoolWorldMergeGoal<TWorldState, TAction, TGoal>, TWorldState, TAction, TGoal, TWatchdog, TLog>
+                       .RunAndDispose(new(agent_), actions, watchdog, out goal, out cost, log);
+                return PlanBuildIterator<AgentWrapperPoolWorld<TWorldState, TAction, TGoal>, TWorldState, TAction, TGoal, TWatchdog, TLog>
+                    .RunAndDispose(new(agent_), actions, watchdog, out goal, out cost, log);
             }
 
             if (typeof(IGoalMerge<TGoal>).IsAssignableFrom(planType))
-                return PlanInner<AgentWrapperMergeGoal<TWorld, TAction, TGoal>, TWorld, TAction, TGoal, TWatchdog, TLog>(
-                    builder!, new(plan_), actions, out goal, out cost, watchdog);
+                return PlanBuildIterator<AgentWrapperMergeGoal<TWorldState, TAction, TGoal>, TWorldState, TAction, TGoal, TWatchdog, TLog>
+                    .RunAndDispose(new(agent_), actions, watchdog, out goal, out cost, log);
 
-            return PlanInner<AgentWrapper<TWorld, TAction, TGoal>, TWorld, TAction, TGoal, TWatchdog, TLog>(
-                builder!, new(plan_), actions, out goal, out cost, watchdog);
+            return PlanBuildIterator<AgentWrapper<TWorldState, TAction, TGoal>, TWorldState, TAction, TGoal, TWatchdog, TLog>
+                .RunAndDispose(new(agent_), actions, watchdog, out goal, out cost, log);
         }
-
-        private static PlanResult PlanInner<TAgent, TWorld, TAction, TGoal, TWatchdog, TLog>(
-            PlanBuilder<TWorld, TGoal, TAction> builder, TAgent agent, Stack<TAction> actions, out TGoal? goal, out float cost, TWatchdog watchdog)
-            where TAgent : IAgent<TWorld, TGoal, TAction>
-            where TWorld : IWorldState<TWorld>
-            where TAction : IAction<TWorld, TGoal>
-            where TGoal : IGoal<TWorld>
-            where TWatchdog : IWatchdog
-        {
-            Debug.Assert(typeof(TAgent).IsValueType, $"{nameof(TAgent)} must be a value type to constant propagate type checks.");
-            Toggle.Assert<TLog>();
-
-            using IEnumerator<TAction> availableActions = Initialize();
-
-            while (builder.TryDequeue<TAgent, TLog>(out int id, out float currentCost, out int currentGoalIndex, out TWorld? currentMemory))
-            {
-                if (!watchdog.CanContinue(currentCost))
-                {
-                    builder.Cancel<TLog>();
-                    break;
-                }
-
-                while (availableActions.MoveNext())
-                {
-                    TAction action = availableActions.Current;
-
-                    if (Toggle.IsOn<TLog>())
-                    {
-                        builder.AppendToLog(" - Check with action: ");
-                        builder.AppendToLog(action.ToString());
-                        builder.AppendToLog(" ");
-                        builder.AppendToLog(currentMemory.ToString());
-                        builder.AppendToLog(" -> ");
-                    }
-
-                    TWorld newMemory = Clone(currentMemory);
-                    action.ApplyEffect(newMemory);
-
-                    if (Toggle.IsOn<TLog>())
-                        builder.AppendToLog(newMemory.ToString());
-
-                    PlanBuilder<TWorld, TGoal, TAction>.GoalNode currentGoal = builder.GetGoal(currentGoalIndex);
-
-                    if (Toggle.IsOn<TLog>())
-                    {
-                        builder.AppendToLog(". And goal: ");
-                        builder.AppendToLog(currentGoal.Goal.ToString());
-                    }
-
-                    switch (currentGoal.Goal.CheckAndTrySatisfy(currentMemory, newMemory))
-                    {
-                        case SatisfactionResult.Satisfied:
-                        {
-                            if (Toggle.IsOn<TLog>())
-                                builder.AppendToLog(". Satisfied.\n   ");
-
-                            float newCost = currentCost + action.GetCost();
-                            if (action.TryGetRequiredGoal(out TGoal requiredGoal))
-                            {
-                                int newGoals = currentGoal.WithReplacement(builder, requiredGoal);
-                                builder.Enqueue<TLog>(id, action, newCost, newGoals, newMemory);
-                            }
-                            else if (currentGoal.WithPop(out int newGoals))
-                                builder.Enqueue<TLog>(id, action, newCost, newGoals, newMemory);
-                            else
-                                FoundValidPath(id, newCost, action, newMemory);
-
-                            break;
-                        }
-                        case SatisfactionResult.Progressed:
-                        {
-                            if (Toggle.IsOn<TLog>())
-                                builder.AppendToLog(". Progressed.\n   ");
-
-                            float newCost = currentCost + action.GetCost();
-                            if (action.TryGetRequiredGoal(out TGoal requiredGoal))
-                            {
-                                int newGoals = PlanBuilder<TWorld, TGoal, TAction>.GoalNode.WithPush(builder, currentGoalIndex, requiredGoal);
-                                builder.Enqueue<TLog>(id, action, newCost, newGoals, newMemory);
-                            }
-                            else
-                                builder.Enqueue<TLog>(id, action, newCost, currentGoalIndex, newMemory);
-                            break;
-                        }
-                        case SatisfactionResult.NotProgressed:
-                        {
-                            if (Toggle.IsOn<TLog>())
-                                builder.AppendAndLog(". Not progressed.");
-                            if (typeof(IWorldStatePool<TWorld>).IsAssignableFrom(typeof(TAgent)))
-                                ((IWorldStatePool<TWorld>)agent).Return(newMemory);
-                            break;
-                        }
-                        default:
-                        {
-                            ThrowInvalidSatisfactionResultException();
-                            break;
-                        }
-                    }
-                }
-
-                availableActions.Reset();
-
-                if (typeof(IWorldStatePool<TWorld>).IsAssignableFrom(typeof(TAgent)))
-                    ((IWorldStatePool<TWorld>)agent).Return(currentMemory);
-            }
-
-            return builder.Finalize<TAgent, TLog>(agent, actions, out goal, out cost);
-
-            [MethodImpl(MethodImplOptions.NoInlining)]
-            IEnumerator<TAction> Initialize()
-            {
-                TWorld memory = agent.GetWorldState();
-
-                if (Toggle.IsOn<TLog>())
-                {
-                    builder.AppendToLog("Start planning. Initial memory ");
-                    builder.AppendAndLog(memory.ToString());
-                }
-
-                using IEnumerator<TGoal> goals = agent.GetGoals();
-
-                if (Toggle.IsOn<TLog>())
-                {
-                    builder.AppendToLog("Goals:");
-                    bool has = false;
-                    while (goals.MoveNext())
-                    {
-                        has = true;
-                        builder.AppendToLog("\n - ");
-                        builder.AppendToLog(goals.Current.ToString());
-                    }
-                    if (!has)
-                        builder.AppendToLog("\n - <>");
-                    builder.Log();
-                    goals.Reset();
-                }
-
-                if (!goals.MoveNext())
-                    throw new InvalidOperationException("Must have at least one goal.");
-
-                EnqueueGoal();
-                while (goals.MoveNext())
-                    EnqueueGoal();
-
-                IEnumerator<TAction> actions = agent.GetActions();
-                try
-                {
-                    if (Toggle.IsOn<TLog>())
-                    {
-                        builder.AppendToLog("Actions:");
-                        bool has = false;
-                        while (actions.MoveNext())
-                        {
-                            has = true;
-                            builder.AppendToLog("\n - ");
-                            builder.AppendToLog(actions.Current.ToString());
-                        }
-                        if (!has)
-                            builder.AppendToLog("\n - <>");
-                        builder.Log();
-                        actions.Reset();
-                    }
-
-                    if (!actions.MoveNext())
-                        throw new InvalidOperationException("Must have at least one action.");
-                    actions.Reset();
-
-                    return actions;
-                }
-                catch
-                {
-                    actions.Dispose();
-                    throw;
-                }
-
-                void EnqueueGoal()
-                {
-                    TWorld newMemory;
-                    if (typeof(IWorldStatePool<TWorld>).IsAssignableFrom(typeof(TAgent)))
-                        newMemory = ((IWorldStatePool<TWorld>)agent).Clone(memory);
-                    else
-                        newMemory = memory.Clone();
-                    builder.EnqueueGoal<TLog>(goals.Current, newMemory);
-                }
-            }
-
-            [MethodImpl(MethodImplOptions.NoInlining)]
-            void FoundValidPath(int id, float cost, TAction action, TWorld newMemory)
-            {
-                if (typeof(IWorldStatePool<TWorld>).IsAssignableFrom(typeof(TAgent))) 
-                    ((IWorldStatePool<TWorld>)agent).Return(newMemory);
-                builder.EnqueueValidPath<TLog>(id, action, cost);
-            }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            TWorld Clone(TWorld currentMemory)
-            {
-                if (typeof(IWorldStatePool<TWorld>).IsAssignableFrom(typeof(TAgent)))
-                    return ((IWorldStatePool<TWorld>)agent).Clone(currentMemory);
-                else
-                    return currentMemory.Clone();
-            }
-
-            static void ThrowInvalidSatisfactionResultException() => throw new InvalidOperationException($"Returned value is not a valid value of {nameof(SatisfactionResult)}");
-        }
-
-        [DoesNotReturn]
-        private static void ThrowNullActionsException() => throw new ArgumentNullException("actions");
-
-        [DoesNotReturn]
-        private static void ThrowNullPlanException() => throw new ArgumentNullException("plan");
     }
 }

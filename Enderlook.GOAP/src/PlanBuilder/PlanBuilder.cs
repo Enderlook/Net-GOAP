@@ -33,6 +33,7 @@ namespace Enderlook.GOAP
         {
             Cancelled,
             Found,
+            Finalized,
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -149,8 +150,7 @@ namespace Enderlook.GOAP
                 AppendAndLog("Cancelled.");
         }
 
-        [MethodImpl(MethodImplOptions.NoInlining)]
-        internal PlanResult Finalize<TAgent, TLog>(TAgent agent, Stack<TAction> actions, out TGoal? goal, out float cost)
+        internal PlanResult Finalize<TAgent, TLog>(Stack<TAction> actions, out TGoal? goal, out float cost)
         {
             Debug.Assert(typeof(TAgent).IsValueType, $"{nameof(TAgent)} must be a value type to constant propagate type checks.");
 
@@ -158,7 +158,6 @@ namespace Enderlook.GOAP
             {
                 goal = default;
                 cost = 0;
-                Clear<Toggle.No>(0);
                 return (state & State.Cancelled) != 0 ? PlanResult.Cancelled : PlanResult.NotFound;
             }
 
@@ -197,9 +196,22 @@ namespace Enderlook.GOAP
                 Log();
             }
 
-            Clear<Toggle.Yes>(lastIndex);
+            endNode = lastIndex;
+
+            state |= State.Finalized;
 
             return (state & State.Cancelled) != 0 ? PlanResult.CancelledButFound :  PlanResult.FoundPlan;
+        }
+
+        public void Clear<TAgent>(TAgent agent)
+        {
+            Debug.Assert(agent is not null);
+            Debug.Assert(typeof(TAgent).IsValueType, $"{nameof(TAgent)} must be a value type to constant propagate type checks.");
+
+            if ((state & State.Found) == 0 || (state & State.Finalized) == 0)
+                Clear<Toggle.No>(0);
+            else
+                Clear<Toggle.Yes>(endNode);
 
             void Clear<TIgnore>(int ignore)
             {
@@ -259,6 +271,7 @@ namespace Enderlook.GOAP
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Log()
         {
+            Debug.Assert(log is not null);
             log(builder.ToString());
             builder.Clear();
         }
