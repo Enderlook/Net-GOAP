@@ -9,7 +9,7 @@ using System.Text;
 
 namespace Enderlook.GOAP
 {
-    internal sealed partial class PlanBuilder<TWorldState, TGoal, TAction>
+    internal sealed partial class PlanBuilderState<TWorldState, TGoal, TAction>
         where TWorldState : IWorldState<TWorldState>
         where TGoal : IGoal<TWorldState>
     {
@@ -65,18 +65,33 @@ namespace Enderlook.GOAP
                 AppendAndLog("Cancelled.");
         }
 
-        internal PlanResult Finalize<TAgent, TLog>(Stack<TAction> plan, out TGoal? goal, out float cost)
+        internal PlanResult<TGoal, TAction> Finalize<TAgent, TLog>(Stack<TAction> plan)
         {
             Debug.Assert(typeof(TAgent).IsValueType, $"{nameof(TAgent)} must be a value type to constant propagate type checks.");
 
-            if ((state & State.Found) == 0)
+            if ((state & State.Cancelled) != 0)
             {
-                goal = default;
-                cost = 0;
-                return (state & State.Cancelled) != 0 ? PlanResult.Cancelled : PlanResult.NotFound;
+                if (Toggle.IsOn<TLog>())
+                {
+                    builder.Append("Cancelled: ");
+                    builder.Append("\nTotal actions enqueued: ").Append(nodes.Count).Append('.');
+                    builder.Append("\nTotal goals stored: ").Append(goals.Count).Append('.');
+                    builder.Append("\nRemaining nodes to visit: ").Append(toVisit.Count).Append('.');
+                }
+                return PlanResult<TGoal, TAction>.Cancelled;
             }
 
-            cost = this.cost;
+            if ((state & State.Found) == 0)
+            {
+                if (Toggle.IsOn<TLog>())
+                {
+                    builder.Append("Cancelled: ");
+                    builder.Append("\nTotal actions enqueued: ").Append(nodes.Count).Append('.');
+                    builder.Append("\nTotal goals stored: ").Append(goals.Count).Append('.');
+                    builder.Append("\nRemaining nodes to visit: ").Append(toVisit.Count).Append('.');
+                }
+                return PlanResult<TGoal, TAction>.NotFound;
+            }
 
             if (Toggle.IsOn<TLog>())
             { 
@@ -92,6 +107,7 @@ namespace Enderlook.GOAP
 
             int index = endNode;
             int lastIndex = index;
+            TGoal goal;
             while (true)
             {
                 ref PathNode node = ref nodes[index];
@@ -115,7 +131,7 @@ namespace Enderlook.GOAP
 
             state |= State.Finalized;
 
-            return (state & State.Cancelled) != 0 ? PlanResult.CancelledButFound :  PlanResult.FoundPlan;
+            return new(PlanResultMode.FoundPlan, plan, goal, cost);
         }
 
         public void Clear<TAgent>(TAgent agent)

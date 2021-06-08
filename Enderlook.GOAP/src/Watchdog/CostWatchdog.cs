@@ -10,6 +10,6 @@ namespace Enderlook.GOAP
         public CostWatchdog(float cost) => this.cost = cost;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool CanContinue(float cost) => cost < this.cost;
+        public WatchdogResult Poll(float cost) => cost >= this.cost ? WatchdogResult.Cancel : WatchdogResult.Continue;
     }
 }

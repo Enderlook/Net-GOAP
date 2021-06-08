@@ -11,6 +11,6 @@ namespace Enderlook.GOAP
         public CancellableWatchdog(CancellationToken token) => this.token = token;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool CanContinue(float cost) => !token.IsCancellationRequested;
+        public WatchdogResult Poll(float cost) => token.IsCancellationRequested ? WatchdogResult.Cancel : WatchdogResult.Continue;
     }
 }

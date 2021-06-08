@@ -3,7 +3,7 @@
     /// <summary>
     /// Determines the result of a plan.
     /// </summary>
-    public enum PlanResult
+    internal enum PlanResultMode
     {
         /// <summary>
         /// A plan to reach the requested goal was found.
@@ -19,10 +19,5 @@
         /// The planification was cancelled before founding a plan to reach the requested goal.
         /// </summary>
         Cancelled,
-
-        /// <summary>
-        /// The planification was cancelled, yet it found a plan. However, this plan may not be optimum.
-        /// </summary>
-        CancelledButFound,
     }
 }

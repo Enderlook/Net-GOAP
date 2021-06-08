@@ -6,7 +6,7 @@ using System.Text;
 
 namespace Enderlook.GOAP
 {
-    internal sealed partial class PlanBuilder<TWorldState, TGoal, TAction>
+    internal sealed partial class PlanBuilderState<TWorldState, TGoal, TAction>
     {
         private struct PathNode
         {
@@ -64,7 +64,7 @@ namespace Enderlook.GOAP
                     World = default;
             }
 
-            public string ToLogText(PlanBuilder<TWorldState, TGoal, TAction> planBuilder, int id)
+            public string ToLogText(PlanBuilderState<TWorldState, TGoal, TAction> planBuilder, int id)
             {
                 StringBuilder builder = planBuilder.builder;
                 int initialLength = builder.Length;

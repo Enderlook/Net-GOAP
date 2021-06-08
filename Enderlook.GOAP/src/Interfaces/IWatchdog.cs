@@ -6,10 +6,10 @@
     public interface IWatchdog
     {
         /// <summary>
-        /// Determines if the planning can continue or must cancel.
+        /// Determines if the planning how should continue.
         /// </summary>
         /// <param name="cost">Current cost of total actions to perform.</param>
-        /// <returns><see langword="true"/> if it can continue. <see langword="false"/> if it must stop.</returns>
-        bool CanContinue(float cost);
+        /// <returns>How the planning should continue.</returns>
+        WatchdogResult Poll(float cost);
     }
 }
