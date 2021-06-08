@@ -6,6 +6,10 @@ using System.Threading;
 
 namespace Enderlook.GOAP
 {
+    /// <summary>
+    /// An static thread-safe pool.
+    /// </summary>
+    /// <typeparam name="T">Type of element to pool.</typeparam>
     internal static class Pool<T> where T : class, new()
     {
         private const int INITAL_CAPACITY = 16;
@@ -19,6 +23,10 @@ namespace Enderlook.GOAP
         static Pool() => new AutoPurge();
 #pragma warning restore CA1806 // Do not ignore method results
 
+        /// <summary>
+        /// Get an instance from the pool or create a new one.
+        /// </summary>
+        /// <returns>Instance of the element.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static T Get()
         {
@@ -40,6 +48,10 @@ namespace Enderlook.GOAP
             return item;
         }
 
+        /// <summary>
+        /// Return an instance to the pool giving its ownership..
+        /// </summary>
+        /// <param name="item">Element to return to the pool.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Return(T item)
         {
