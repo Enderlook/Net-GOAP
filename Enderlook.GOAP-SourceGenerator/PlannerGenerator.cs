@@ -56,6 +56,13 @@ namespace Enderlook.GOAP
                 _ => default,
             };
 
+            string postfix = mode switch
+            {
+                Mode.Async => "Async",
+                Mode.Coroutine => "Coroutine",
+                _ => "",
+            };
+
             return (name, $@"
 using System;
 using System.Collections.Generic;
@@ -70,93 +77,87 @@ namespace Enderlook.GOAP
     /// </summary>
     public static partial class Planner
     {{
-        /// <summary>
-        /// Helper synchronous methods to compute GOAP.
-        /// </summary>
-        public static partial class {mode}
+        {string.Join("\n", new[] {
+            new { parameterName = "token", parameterType = "CancellationToken", type = "CancellableWatchdog", description = "Cancellation token." },
+            new { parameterName = "cost", parameterType = "float", type = "CostWatchdog", description = "Cancelates the execution of the plan if the plan cost is higher than this value." },
+            new { parameterName = "", parameterType = (string)null, type = "EndlessWatchdog", description = "" },
+        }.Select(e => @$"
+        {GetDocumentation(log, e.parameterName, e.description)}
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static {resultType} Plan{postfix}<TAgent, TWorldState, TAction, TGoal>(
+            TAgent agent, Stack<TAction> plan{(e.parameterType is null ? "" : $", {e.parameterType} {e.parameterName}")}{logParameter})
+            where TAgent : IAgent<TWorldState, TGoal, TAction>
+            where TWorldState : IWorldState<TWorldState>
+            where TAction : IAction<TWorldState, TGoal>
+            where TGoal : IGoal<TWorldState>
+            => PlanInner{postfix}<TAgent, TWorldState, TAction, TGoal, {e.type}>(agent, plan, new {e.type}({e.parameterName}){logArgument});
+        "))}
+
+        {GetDocumentation(log, "", null)}
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static {resultType} Plan{postfix}<TAgent, TWorldState, TAction, TGoal, TWatchdog>(
+            TAgent agent, Stack<TAction> plan, TWatchdog watchdog{logParameter})
+            where TAgent : IAgent<TWorldState, TGoal, TAction>
+            where TWorldState : IWorldState<TWorldState>
+            where TAction : IAction<TWorldState, TGoal>
+            where TGoal : IGoal<TWorldState>
+            where TWatchdog : IWatchdog
+            => PlanInner{postfix}<TAgent, TWorldState, TAction, TGoal, TWatchdog>(agent, plan, watchdog{logArgument});
+
+        private static {resultType} PlanInner{postfix}<TAgent, TWorldState, TAction, TGoal, TWatchdog>(
+            TAgent agent, Stack<TAction> plan, TWatchdog watchdog{logParameter})
+            where TAgent : IAgent<TWorldState, TGoal, TAction>
+            where TWorldState : IWorldState<TWorldState>
+            where TAction : IAction<TWorldState, TGoal>
+            where TGoal : IGoal<TWorldState>
+            where TWatchdog : IWatchdog
         {{
-            {string.Join("\n", new[] {
-                new { parameterName = "token", parameterType = "CancellationToken", type = "CancellableWatchdog", description = "Cancellation token." },
-                new { parameterName = "cost", parameterType = "float", type = "CostWatchdog", description = "Cancelates the execution of the plan if the plan cost is higher than this value." },
-                new { parameterName = "", parameterType = (string)null, type = "EndlessWatchdog", description = "" },
-            }.Select(e => @$"
-            {GetDocumentation(log, e.parameterName, e.description)}
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public static {resultType} Plan<TAgent, TWorldState, TAction, TGoal>(
-                TAgent agent, Stack<TAction> plan{(e.parameterType is null ? "" : $", {e.parameterType} {e.parameterName}")}{logParameter})
-                where TAgent : IAgent<TWorldState, TGoal, TAction>
-                where TWorldState : IWorldState<TWorldState>
-                where TAction : IAction<TWorldState, TGoal>
-                where TGoal : IGoal<TWorldState>
-                => PlanInner<TAgent, TWorldState, TAction, TGoal, {e.type}>(agent, plan, new {e.type}({e.parameterName}){logArgument});
-            "))}
-
-            {GetDocumentation(log, "", null)}
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public static {resultType} Plan<TAgent, TWorldState, TAction, TGoal, TWatchdog>(
-                TAgent agent, Stack<TAction> plan, TWatchdog watchdog{logParameter})
-                where TAgent : IAgent<TWorldState, TGoal, TAction>
-                where TWorldState : IWorldState<TWorldState>
-                where TAction : IAction<TWorldState, TGoal>
-                where TGoal : IGoal<TWorldState>
-                where TWatchdog : IWatchdog
-                => PlanInner<TAgent, TWorldState, TAction, TGoal, TWatchdog>(agent, plan, watchdog{logArgument});
-
-            private static {resultType} PlanInner<TAgent, TWorldState, TAction, TGoal, TWatchdog>(
-                TAgent agent, Stack<TAction> plan, TWatchdog watchdog{logParameter})
-                where TAgent : IAgent<TWorldState, TGoal, TAction>
-                where TWorldState : IWorldState<TWorldState>
-                where TAction : IAction<TWorldState, TGoal>
-                where TGoal : IGoal<TWorldState>
-                where TWatchdog : IWatchdog
-            {{
-                if (typeof(TAgent).IsValueType)
-                    return PlanBuilderIterator<TAgent, TWorldState, TAction, TGoal, TWatchdog, {logToggle}>
-                        .{method}(agent, plan, watchdog{logArgument});
+            if (typeof(TAgent).IsValueType)
+                return PlanBuilderIterator<TAgent, TWorldState, TAction, TGoal, TWatchdog, {logToggle}>
+                    .{method}(agent, plan, watchdog{logArgument});
 
 #pragma warning disable HAA0601 // Value type to reference type conversion causing boxing allocation
-                IAgent<TWorldState, TGoal, TAction> agent_ = agent;
+            IAgent<TWorldState, TGoal, TAction> agent_ = agent;
 #pragma warning restore HAA0601 // Value type to reference type conversion causing boxing allocation
 
-                Type planType = agent.GetType();
+            Type planType = agent.GetType();
 
-                bool goalPool = typeof(IGoalPool<TGoal>).IsAssignableFrom(planType);
-                bool worldStatePool = typeof(IWorldStatePool<TWorldState>).IsAssignableFrom(planType);
-                bool goalMerge = typeof(IGoalMerge<TGoal>).IsAssignableFrom(planType);
+            bool goalPool = typeof(IGoalPool<TGoal>).IsAssignableFrom(planType);
+            bool worldStatePool = typeof(IWorldStatePool<TWorldState>).IsAssignableFrom(planType);
+            bool goalMerge = typeof(IGoalMerge<TGoal>).IsAssignableFrom(planType);
 
-                if (goalPool)
-                {{
-                    if (worldStatePool)
-                    {{
-                        if (goalMerge)
-                            return PlanBuilderIterator<AgentWrapperPoolGoalPoolWorldMergeGoal<TWorldState, TAction, TGoal>, TWorldState, TAction, TGoal, TWatchdog, {logToggle}>
-                                .{method}(new(agent_), plan, watchdog{logArgument});
-                        return PlanBuilderIterator<AgentWrapperPoolGoalPoolWorld<TWorldState, TAction, TGoal>, TWorldState, TAction, TGoal, TWatchdog, {logToggle}>
-                            .{method}(new(agent_), plan, watchdog{logArgument});
-                    }}
-                    if (goalMerge)
-                        return PlanBuilderIterator<AgentWrapperPoolGoalMergeGoal<TWorldState, TAction, TGoal>, TWorldState, TAction, TGoal, TWatchdog, {logToggle}>
-                            .{method}(new(agent_), plan, watchdog);
-                    return PlanBuilderIterator<AgentWrapperPoolGoal<TWorldState, TAction, TGoal>, TWorldState, TAction, TGoal, TWatchdog, {logToggle}>
-                        .{method}(new(agent_), plan, watchdog{logArgument});
-                }}
-
+            if (goalPool)
+            {{
                 if (worldStatePool)
                 {{
                     if (goalMerge)
-                        return PlanBuilderIterator<AgentWrapperPoolWorldMergeGoal<TWorldState, TAction, TGoal>, TWorldState, TAction, TGoal, TWatchdog, {logToggle}>
-                           .{method}(new(agent_), plan, watchdog{logArgument});
-                    return PlanBuilderIterator<AgentWrapperPoolWorld<TWorldState, TAction, TGoal>, TWorldState, TAction, TGoal, TWatchdog, {logToggle}>
+                        return PlanBuilderIterator<AgentWrapperPoolGoalPoolWorldMergeGoal<TWorldState, TAction, TGoal>, TWorldState, TAction, TGoal, TWatchdog, {logToggle}>
+                            .{method}(new(agent_), plan, watchdog{logArgument});
+                    return PlanBuilderIterator<AgentWrapperPoolGoalPoolWorld<TWorldState, TAction, TGoal>, TWorldState, TAction, TGoal, TWatchdog, {logToggle}>
                         .{method}(new(agent_), plan, watchdog{logArgument});
                 }}
-
                 if (goalMerge)
-                    return PlanBuilderIterator<AgentWrapperMergeGoal<TWorldState, TAction, TGoal>, TWorldState, TAction, TGoal, TWatchdog, {logToggle}>
-                        .{method}(new(agent_), plan, watchdog{logArgument});
-
-                return PlanBuilderIterator<AgentWrapper<TWorldState, TAction, TGoal>, TWorldState, TAction, TGoal, TWatchdog, {logToggle}>
+                    return PlanBuilderIterator<AgentWrapperPoolGoalMergeGoal<TWorldState, TAction, TGoal>, TWorldState, TAction, TGoal, TWatchdog, {logToggle}>
+                        .{method}(new(agent_), plan, watchdog);
+                return PlanBuilderIterator<AgentWrapperPoolGoal<TWorldState, TAction, TGoal>, TWorldState, TAction, TGoal, TWatchdog, {logToggle}>
                     .{method}(new(agent_), plan, watchdog{logArgument});
             }}
+
+            if (worldStatePool)
+            {{
+                if (goalMerge)
+                    return PlanBuilderIterator<AgentWrapperPoolWorldMergeGoal<TWorldState, TAction, TGoal>, TWorldState, TAction, TGoal, TWatchdog, {logToggle}>
+                        .{method}(new(agent_), plan, watchdog{logArgument});
+                return PlanBuilderIterator<AgentWrapperPoolWorld<TWorldState, TAction, TGoal>, TWorldState, TAction, TGoal, TWatchdog, {logToggle}>
+                    .{method}(new(agent_), plan, watchdog{logArgument});
+            }}
+
+            if (goalMerge)
+                return PlanBuilderIterator<AgentWrapperMergeGoal<TWorldState, TAction, TGoal>, TWorldState, TAction, TGoal, TWatchdog, {logToggle}>
+                    .{method}(new(agent_), plan, watchdog{logArgument});
+
+            return PlanBuilderIterator<AgentWrapper<TWorldState, TAction, TGoal>, TWorldState, TAction, TGoal, TWatchdog, {logToggle}>
+                .{method}(new(agent_), plan, watchdog{logArgument});
         }}
     }}
 }}
@@ -165,23 +166,23 @@ namespace Enderlook.GOAP
 
         private static string GetDocumentation(bool hasLog, string watchdogName, string watchdogDescription)
             => @$"
-            /// <summary>
-            /// Uses GOAP to computes how to complete the goal with the lowest cost from <paramref name=""agent""/>.
-            /// </summary>
-            /// <typeparam name=""TAgent"">Type of agent.</typeparam>
-            /// <typeparam name=""TWorldState"">Type of world state.</typeparam>
-            /// <typeparam name=""TAction"">Type of actions.</typeparam>
-            /// <typeparam name=""TGoal"">Type of goals.</typeparam>
-            /// <param name=""agent"">Agent where world state, goals and available actions are got.<br/>
-            /// This type can implement the following interfaces for additional features:
-            /// <see cref=""IGoalMerge{{TGoal}}""/>, <see cref=""IGoalPool{{TGoal}}""/>, <see cref=""IWorldStatePool{{TWorld}}""/>.</param>
-            /// <param name=""plan"">Collection where actions required to complete the goal will be stored.</param>
-            {(watchdogName == "" ? @"/// <param name=""watchdog"">Token used to cancelate or suspend the execution </param>" : watchdogName is null ? "" : @$"/// <param name=""{watchdogName}"">{watchdogDescription}</param>")}
-            {(hasLog ? @"/// <param name=""log"">Log action used to debug the planification. The layout of the log content is an implementation detail.</param>" : "")}
-            /// <returns></returns>
-            /// <exception cref=""ArgumentNullException"">Throw if <paramref name=""agent""/> is <see langword=""null""/>.</exception>
-            /// <exception cref=""ArgumentNullException"">Throw if <paramref name=""plan""/> is <see langword=""null""/>.</exception>
-            {(watchdogName == "" ? @"/// <exception cref=""ArgumentNullException"">Throw if <paramref name=""watchdog""/> is <see langword=""null""/>.</exception>" : "")}
-            {(hasLog ? @"/// <exception cref=""ArgumentNullException"">Throw if <paramref name=""log""/> is <see langword=""null""/>.</exception>" : "")}";
+        /// <summary>
+        /// Uses GOAP to computes how to complete the goal with the lowest cost from <paramref name=""agent""/>.
+        /// </summary>
+        /// <typeparam name=""TAgent"">Type of agent.</typeparam>
+        /// <typeparam name=""TWorldState"">Type of world state.</typeparam>
+        /// <typeparam name=""TAction"">Type of actions.</typeparam>
+        /// <typeparam name=""TGoal"">Type of goals.</typeparam>
+        /// <param name=""agent"">Agent where world state, goals and available actions are got.<br/>
+        /// This type can implement the following interfaces for additional features:
+        /// <see cref=""IGoalMerge{{TGoal}}""/>, <see cref=""IGoalPool{{TGoal}}""/>, <see cref=""IWorldStatePool{{TWorld}}""/>.</param>
+        /// <param name=""plan"">Collection where actions required to complete the goal will be stored.</param>
+        {(watchdogName == "" ? @"/// <param name=""watchdog"">Token used to cancelate or suspend the execution </param>" : watchdogName is null ? "" : @$"/// <param name=""{watchdogName}"">{watchdogDescription}</param>")}
+        {(hasLog ? @"/// <param name=""log"">Log action used to debug the planification. The layout of the log content is an implementation detail.</param>" : "")}
+        /// <returns></returns>
+        /// <exception cref=""ArgumentNullException"">Throw if <paramref name=""agent""/> is <see langword=""null""/>.</exception>
+        /// <exception cref=""ArgumentNullException"">Throw if <paramref name=""plan""/> is <see langword=""null""/>.</exception>
+        {(watchdogName == "" ? @"/// <exception cref=""ArgumentNullException"">Throw if <paramref name=""watchdog""/> is <see langword=""null""/>.</exception>" : "")}
+        {(hasLog ? @"/// <exception cref=""ArgumentNullException"">Throw if <paramref name=""log""/> is <see langword=""null""/>.</exception>" : "")}";
     }
 }
