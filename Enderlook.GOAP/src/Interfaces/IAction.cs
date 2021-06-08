@@ -3,11 +3,11 @@
     /// <summary>
     /// Describes an action.
     /// </summary>
-    /// <typeparam name="TMemory">Type of memory.</typeparam>
+    /// <typeparam name="TWorldState">Type of world state.</typeparam>
     /// <typeparam name="TGoal">Type of goal.</typeparam>
-    public interface IAction<TMemory, TGoal>
-        where TMemory : IWorldState<TMemory>
-        where TGoal : IGoal<TMemory>
+    public interface IAction<TWorldState, TGoal>
+        where TWorldState : IWorldState<TWorldState>
+        where TGoal : IGoal<TWorldState>
     {
         /// <summary>
         /// Get the preconditions required to perform this action.
@@ -26,7 +26,7 @@
         /// Applies the effects of this action to a memory.<br/>
         /// Note that this method must not consume the required goal.
         /// </summary>
-        /// <param name="memory">Memory where effects are being applied.</param>
-        void ApplyEffect(TMemory memory);
+        /// <param name="memory">World state where effects are being applied.</param>
+        void ApplyEffect(TWorldState memory);
     }
 }
