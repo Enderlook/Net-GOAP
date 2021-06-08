@@ -377,7 +377,7 @@ namespace Enderlook.GOAP
             static void ThrowGoalsIsNullException() => throw new InvalidOperationException("Goals can't be null.");
 
             [DoesNotReturn]
-            static void ThrowGoalIsNullException() => throw new InvalidOperationException("Goals can't be null.");
+            static void ThrowGoalIsNullException() => throw new InvalidOperationException("Goal can't be null.");
         }
     }
 }
