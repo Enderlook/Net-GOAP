@@ -59,10 +59,11 @@ namespace Enderlook.GOAP
 
             if (unchecked((uint)index >= (uint)pool_.Length))
                 SlowPath();
-
-            Utils.Set<object>(pool_, ++index, item);
-
-            pool = pool_;
+            else
+            {
+                Utils.Set<object>(pool_, ++index, item);
+                pool = pool_;
+            }
 
             [MethodImpl(MethodImplOptions.NoInlining)]
             void SlowPath()
