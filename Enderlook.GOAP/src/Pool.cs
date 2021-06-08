@@ -49,7 +49,7 @@ namespace Enderlook.GOAP
         }
 
         /// <summary>
-        /// Return an instance to the pool giving its ownership..
+        /// Return an instance to the pool giving its ownership.
         /// </summary>
         /// <param name="item">Element to return to the pool.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
