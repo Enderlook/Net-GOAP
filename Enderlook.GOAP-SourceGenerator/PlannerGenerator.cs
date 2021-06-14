@@ -72,9 +72,6 @@ using System.Threading.Tasks;
 
 namespace Enderlook.GOAP
 {{
-    /// <summary>
-    /// Helper methods to compute GOAP.
-    /// </summary>
     public static partial class Planner
     {{
         {string.Join("\n", new[] {
@@ -112,6 +109,17 @@ namespace Enderlook.GOAP
             where TGoal : IGoal<TWorldState>
             where TWatchdog : IWatchdog
         {{
+            if (agent is null)
+                ThrowNullAgentException();
+            if (plan is null)
+                ThrowNullPlanException();
+            if (watchdog is null)
+                ThrowNullWatchdogException();
+            {(log ? @"
+            if (log is null)
+                ThrowNullLogException();
+            " : "")}
+
             if (typeof(TAgent).IsValueType)
                 return PlanBuilderIterator<TAgent, TWorldState, TAction, TGoal, TWatchdog, {logToggle}>
                     .{method}(agent, plan, watchdog{logArgument});

@@ -26,12 +26,9 @@ namespace Enderlook.GOAP
             Debug.Assert(typeof(TAgent).IsValueType, $"{nameof(TAgent)} must be a value type to constant propagate type checks.");
             Toggle.Assert<TLog>();
 
-            if (agent is null)
-                ThrowNullAgentException();
-            if (plan is null)
-                ThrowNullActionsException();
-            if (watchdog is null)
-                ThrowNullWatchdogException();
+            Debug.Assert(agent is not null);
+            Debug.Assert(plan is not null);
+            Debug.Assert(watchdog is not null);
 
             this.agent = agent;
             this.plan = plan;
@@ -44,15 +41,6 @@ namespace Enderlook.GOAP
                 Debug.Assert(log is not null, "Log is enabled, but log is null.");
                 builder.SetLog(log);
             }
-
-            [DoesNotReturn]
-            static void ThrowNullAgentException() => throw new ArgumentNullException(nameof(agent));
-
-            [DoesNotReturn]
-            static void ThrowNullActionsException() => throw new ArgumentNullException(nameof(plan));
-
-            [DoesNotReturn]
-            static void ThrowNullWatchdogException() => throw new ArgumentNullException(nameof(watchdog));
         }
 
         public void Dispose()
