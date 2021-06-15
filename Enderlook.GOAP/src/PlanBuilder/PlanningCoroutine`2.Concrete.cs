@@ -1,9 +1,10 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 
 namespace Enderlook.GOAP
 {
-    internal class PlanningCoroutine<TAgent, TWorldState, TGoal, TAction, TWatchdog, TLog> : PlanningCoroutine<TGoal, TAction>
+    internal class PlanningCoroutine<TAgent, TWorldState, TGoal, TAction, TWatchdog, TLog, TGoalResult, TActionResult> : PlanningCoroutine<TGoalResult, TActionResult>
         where TAgent : IAgent<TWorldState, TGoal, TAction>
         where TWorldState : IWorldState<TWorldState>
         where TGoal : IGoal<TWorldState>
@@ -54,11 +55,11 @@ namespace Enderlook.GOAP
                         return PlanningCoroutineResult.Continue;
                     case ToCancel:
                         state = Cancelled;
-                        result = iterator.Finalize();
+                        SetResult();
                         return PlanningCoroutineResult.Cancelled;
                     case ToFinalize:
                         state = Finalized;
-                        result = iterator.Finalize();
+                        SetResult();
                         return PlanningCoroutineResult.Finalized;
                     case Disposed:
                         ThrowAlreadyDisposedException();
@@ -70,6 +71,24 @@ namespace Enderlook.GOAP
                     default:
                         Debug.Fail("Impossible state.");
                         goto case Finalized;
+                }
+
+                [MethodImpl(MethodImplOptions.AggressiveInlining)]
+                void SetResult()
+                {
+                    if (typeof(TGoalResult) == typeof(int))
+                    {
+                        Debug.Assert(typeof(TActionResult) == typeof(int));
+                        PlanResult<int, int> tmp = iterator.FinalizeInt();
+                        result = Unsafe.As<PlanResult<int, int>, PlanResult<TGoalResult, TActionResult>>(ref tmp);
+                    }
+                    else
+                    {
+                        Debug.Assert(typeof(TGoalResult) == typeof(TGoal));
+                        Debug.Assert(typeof(TActionResult) == typeof(TAction));
+                        PlanResult<TGoal, TAction> tmp = iterator.FinalizeTyped();
+                        result = Unsafe.As<PlanResult<TGoal, TAction>, PlanResult<TGoalResult, TActionResult>>(ref tmp);
+                    }
                 }
             }
 

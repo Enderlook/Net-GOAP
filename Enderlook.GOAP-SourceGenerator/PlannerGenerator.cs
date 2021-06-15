@@ -17,8 +17,11 @@ namespace Enderlook.GOAP
             {
                 foreach (bool log in boolean)
                 {
-                    (string name, string file) = GetFile(mode, log);
-                    context.AddSource(name, SourceText.From(file, Encoding.UTF8));
+                    foreach (bool indexed in boolean)
+                    {
+                        (string name, string file) = GetFile(mode, log, indexed);
+                        context.AddSource(name, SourceText.From(file, Encoding.UTF8));
+                    }
                 }
             }
         }
@@ -32,9 +35,9 @@ namespace Enderlook.GOAP
             Coroutine,
         }
 
-        private (string name, string file) GetFile(Mode mode, bool log)
+        private (string name, string file) GetFile(Mode mode, bool log, bool indexed)
         {
-            string name = $"Planner.{(log ? "Log" : "Logless")}.{mode}";
+            string name = $"Planner.{(log ? "Log" : "Logless")}.{mode}.{(indexed ? "Indexed" : "Typed")}";
 
             string logParameter = log ? ", Action<string> log" : "";
             string logArgument = log ? ", log" : "";
@@ -42,9 +45,9 @@ namespace Enderlook.GOAP
 
             string resultType = mode switch
             {
-                Mode.Sync => "PlanResult<TGoal, TAction>",
-                Mode.Async => "ValueTask<PlanResult<TGoal, TAction>>",
-                Mode.Coroutine => "PlanningCoroutine<TGoal, TAction>",
+                Mode.Sync => $"PlanResult<{(indexed ? "int, int" : "TGoal, TAction")}>",
+                Mode.Async => $"ValueTask<PlanResult<{(indexed ? "int, int" : "TGoal, TAction")}>>",
+                Mode.Coroutine => $"PlanningCoroutine<{(indexed ? "int, int" : "TGoal, TAction")}>",
                 _ => default,
             };
 
@@ -63,6 +66,8 @@ namespace Enderlook.GOAP
                 _ => "",
             };
 
+            string stackGeneric = indexed ? "int" : "TAction";
+
             return (name, $@"
 using System;
 using System.Collections.Generic;
@@ -79,10 +84,10 @@ namespace Enderlook.GOAP
             new { parameterName = "cost", parameterType = "float", type = "CostWatchdog", description = "Cancelates the execution of the plan if the plan cost is higher than this value." },
             new { parameterName = "", parameterType = (string)null, type = "EndlessWatchdog", description = "" },
         }.Select(e => @$"
-        {GetDocumentation(log, e.parameterName, e.description)}
+        {GetDocumentation(log, e.parameterName, e.description, indexed)}
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static {resultType} Plan{postfix}<TAgent, TWorldState, TAction, TGoal>(
-            TAgent agent, Stack<TAction> plan{(e.parameterType is null ? "" : $", {e.parameterType} {e.parameterName}")}{logParameter})
+            TAgent agent, Stack<{stackGeneric}> plan{(e.parameterType is null ? "" : $", {e.parameterType} {e.parameterName}")}{logParameter})
             where TAgent : IAgent<TWorldState, TGoal, TAction>
             where TWorldState : IWorldState<TWorldState>
             where TAction : IAction<TWorldState, TGoal>
@@ -90,10 +95,10 @@ namespace Enderlook.GOAP
             => PlanInner{postfix}<TAgent, TWorldState, TAction, TGoal, {e.type}>(agent, plan, new {e.type}({e.parameterName}){logArgument});
         "))}
 
-        {GetDocumentation(log, "", null)}
+        {GetDocumentation(log, "", null, indexed)}
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static {resultType} Plan{postfix}<TAgent, TWorldState, TAction, TGoal, TWatchdog>(
-            TAgent agent, Stack<TAction> plan, TWatchdog watchdog{logParameter})
+            TAgent agent, Stack<{stackGeneric}> plan, TWatchdog watchdog{logParameter})
             where TAgent : IAgent<TWorldState, TGoal, TAction>
             where TWorldState : IWorldState<TWorldState>
             where TAction : IAction<TWorldState, TGoal>
@@ -102,7 +107,7 @@ namespace Enderlook.GOAP
             => PlanInner{postfix}<TAgent, TWorldState, TAction, TGoal, TWatchdog>(agent, plan, watchdog{logArgument});
 
         private static {resultType} PlanInner{postfix}<TAgent, TWorldState, TAction, TGoal, TWatchdog>(
-            TAgent agent, Stack<TAction> plan, TWatchdog watchdog{logParameter})
+            TAgent agent, Stack<{stackGeneric}> plan, TWatchdog watchdog{logParameter})
             where TAgent : IAgent<TWorldState, TGoal, TAction>
             where TWorldState : IWorldState<TWorldState>
             where TAction : IAction<TWorldState, TGoal>
@@ -172,7 +177,7 @@ namespace Enderlook.GOAP
 ");
     }
 
-        private static string GetDocumentation(bool hasLog, string watchdogName, string watchdogDescription)
+        private static string GetDocumentation(bool hasLog, string watchdogName, string watchdogDescription, bool indexed)
             => @$"
         /// <summary>
         /// Uses GOAP to computes how to complete the goal with the lowest cost from <paramref name=""agent""/>.
@@ -184,7 +189,7 @@ namespace Enderlook.GOAP
         /// <param name=""agent"">Agent where world state, goals and available actions are got.<br/>
         /// This type can implement the following interfaces for additional features:
         /// <see cref=""IGoalMerge{{TGoal}}""/>, <see cref=""IGoalPool{{TGoal}}""/>, <see cref=""IWorldStatePool{{TWorld}}""/>.</param>
-        /// <param name=""plan"">Collection where actions required to complete the goal will be stored.</param>
+        /// <param name=""plan"">Collection where actions required to complete the goal will be stored.{(indexed ? @" Values represent the index of each action gotten from <see cref=""IAgent{TWorldState, TGoal, TAction}.GetActions""/>." : "")}</param>
         {(watchdogName == "" ? @"/// <param name=""watchdog"">Token used to cancelate or suspend the execution </param>" : watchdogName is null ? "" : @$"/// <param name=""{watchdogName}"">{watchdogDescription}</param>")}
         {(hasLog ? @"/// <param name=""log"">Log action used to debug the planification. The layout of the log content is an implementation detail.</param>" : "")}
         /// <returns></returns>

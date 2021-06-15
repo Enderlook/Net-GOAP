@@ -81,5 +81,4 @@ namespace Enderlook.GOAP
             return false;
         }
     }
-
 }
