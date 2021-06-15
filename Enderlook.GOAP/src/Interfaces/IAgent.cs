@@ -22,7 +22,7 @@ namespace Enderlook.GOAP
         /// <summary>
         /// Get all the possible goals that this agent want to complete.
         /// </summary>
-        /// <returns>All goals that this agent want to complete.</returns>
+        /// <returns>All the goals that this agent want to complete.</returns>
         IEnumerator<TGoal> GetGoals();
 
         /// <summary>
