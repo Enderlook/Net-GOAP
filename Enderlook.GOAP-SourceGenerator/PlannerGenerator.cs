@@ -17,11 +17,8 @@ namespace Enderlook.GOAP
             {
                 foreach (bool log in boolean)
                 {
-                    foreach (bool indexed in boolean)
-                    {
-                        (string name, string file) = GetFile(mode, log, indexed);
-                        context.AddSource(name, SourceText.From(file, Encoding.UTF8));
-                    }
+                    (string name, string file) = GetFile(mode, log);
+                    context.AddSource(name, SourceText.From(file, Encoding.UTF8));
                 }
             }
         }
@@ -35,9 +32,9 @@ namespace Enderlook.GOAP
             Coroutine,
         }
 
-        private (string name, string file) GetFile(Mode mode, bool log, bool indexed)
+        private (string name, string file) GetFile(Mode mode, bool log)
         {
-            string name = $"Planner.{(log ? "Log" : "Logless")}.{mode}.{(indexed ? "Indexed" : "Typed")}";
+            string name = $"Planner.{(log ? "Log" : "Logless")}.{mode}";
 
             string logParameter = log ? ", Action<string> log" : "";
             string logArgument = log ? ", log" : "";
@@ -45,10 +42,9 @@ namespace Enderlook.GOAP
 
             string resultType = mode switch
             {
-                Mode.Sync => $"PlanResult<{(indexed ? "int, int" : "TGoal, TAction")}>",
-                Mode.Async => $"ValueTask<PlanResult<{(indexed ? "int, int" : "TGoal, TAction")}>>",
-                Mode.Coroutine => $"PlanningCoroutine<{(indexed ? "int, int" : "TGoal, TAction")}>",
-                _ => default,
+                Mode.Sync => "void",
+                Mode.Async => "ValueTask",
+                Mode.Coroutine => "PlanningCoroutine<TGoal, TAction>",
             };
 
             string method = mode switch
@@ -56,17 +52,26 @@ namespace Enderlook.GOAP
                 Mode.Sync => "RunAndDispose",
                 Mode.Async => "RunAndDisposeAsync",
                 Mode.Coroutine => "RunAndDisposeCorotuine",
-                _ => default,
             };
 
             string postfix = mode switch
             {
+                Mode.Sync => "",
                 Mode.Async => "Async",
                 Mode.Coroutine => "Coroutine",
-                _ => "",
             };
 
-            string stackGeneric = indexed ? "int" : "TAction";
+            string returnKeyword = mode switch
+            {
+                Mode.Sync => "",
+                Mode.Async or Mode.Coroutine => "return",
+            };
+
+            string returnEnd = mode switch
+            {
+                Mode.Sync => "return;",
+                Mode.Async or Mode.Coroutine => "",
+            };
 
             return (name, $@"
 using System;
@@ -84,10 +89,10 @@ namespace Enderlook.GOAP
             new { parameterName = "cost", parameterType = "float", type = "CostWatchdog", description = "Cancelates the execution of the plan if the plan cost is higher than this value." },
             new { parameterName = "", parameterType = (string)null, type = "EndlessWatchdog", description = "" },
         }.Select(e => @$"
-        {GetDocumentation(log, e.parameterName, e.description, indexed)}
+        {GetDocumentation(log, e.parameterName, e.description)}
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static {resultType} Plan{postfix}<TAgent, TWorldState, TAction, TGoal>(
-            TAgent agent, Stack<{stackGeneric}> plan{(e.parameterType is null ? "" : $", {e.parameterType} {e.parameterName}")}{logParameter})
+            TAgent agent, Plan<TGoal, TAction> plan{(e.parameterType is null ? "" : $", {e.parameterType} {e.parameterName}")}{logParameter})
             where TAgent : IAgent<TWorldState, TGoal, TAction>
             where TWorldState : IWorldState<TWorldState>
             where TAction : IAction<TWorldState, TGoal>
@@ -95,10 +100,10 @@ namespace Enderlook.GOAP
             => PlanInner{postfix}<TAgent, TWorldState, TAction, TGoal, {e.type}>(agent, plan, new {e.type}({e.parameterName}){logArgument});
         "))}
 
-        {GetDocumentation(log, "", null, indexed)}
+        {GetDocumentation(log, "", null)}
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static {resultType} Plan{postfix}<TAgent, TWorldState, TAction, TGoal, TWatchdog>(
-            TAgent agent, Stack<{stackGeneric}> plan, TWatchdog watchdog{logParameter})
+            TAgent agent, Plan<TGoal, TAction> plan, TWatchdog watchdog{logParameter})
             where TAgent : IAgent<TWorldState, TGoal, TAction>
             where TWorldState : IWorldState<TWorldState>
             where TAction : IAction<TWorldState, TGoal>
@@ -107,7 +112,7 @@ namespace Enderlook.GOAP
             => PlanInner{postfix}<TAgent, TWorldState, TAction, TGoal, TWatchdog>(agent, plan, watchdog{logArgument});
 
         private static {resultType} PlanInner{postfix}<TAgent, TWorldState, TAction, TGoal, TWatchdog>(
-            TAgent agent, Stack<{stackGeneric}> plan, TWatchdog watchdog{logParameter})
+            TAgent agent, Plan<TGoal, TAction> plan, TWatchdog watchdog{logParameter})
             where TAgent : IAgent<TWorldState, TGoal, TAction>
             where TWorldState : IWorldState<TWorldState>
             where TAction : IAction<TWorldState, TGoal>
@@ -124,10 +129,15 @@ namespace Enderlook.GOAP
             if (log is null)
                 ThrowNullLogException();
             " : "")}
+            if (plan.IsInProgress)
+                ThrowPlanIsInProgress();
 
             if (typeof(TAgent).IsValueType)
-                return PlanBuilderIterator<TAgent, TWorldState, TAction, TGoal, TWatchdog, {logToggle}>
+            {{
+                {returnKeyword} PlanBuilderIterator<TAgent, TWorldState, TAction, TGoal, TWatchdog, {logToggle}>
                     .{method}(agent, plan, watchdog{logArgument});
+                {returnEnd}
+            }}
 
 #pragma warning disable HAA0601 // Value type to reference type conversion causing boxing allocation
             IAgent<TWorldState, TGoal, TAction> agent_ = agent;
@@ -144,40 +154,57 @@ namespace Enderlook.GOAP
                 if (worldStatePool)
                 {{
                     if (goalMerge)
-                        return PlanBuilderIterator<AgentWrapperPoolGoalPoolWorldMergeGoal<TWorldState, TAction, TGoal>, TWorldState, TAction, TGoal, TWatchdog, {logToggle}>
+                    {{
+                        {returnKeyword} PlanBuilderIterator<AgentWrapperPoolGoalPoolWorldMergeGoal<TWorldState, TAction, TGoal>, TWorldState, TAction, TGoal, TWatchdog, {logToggle}>
                             .{method}(new(agent_), plan, watchdog{logArgument});
-                    return PlanBuilderIterator<AgentWrapperPoolGoalPoolWorld<TWorldState, TAction, TGoal>, TWorldState, TAction, TGoal, TWatchdog, {logToggle}>
+                    }}
+                    else
+                    {{
+                        {returnKeyword} PlanBuilderIterator<AgentWrapperPoolGoalPoolWorld<TWorldState, TAction, TGoal>, TWorldState, TAction, TGoal, TWatchdog, {logToggle}>
+                            .{method}(new(agent_), plan, watchdog{logArgument});
+                    }}
+                }}
+                else if (goalMerge)
+                {{
+                    {returnKeyword} PlanBuilderIterator<AgentWrapperPoolGoalMergeGoal<TWorldState, TAction, TGoal>, TWorldState, TAction, TGoal, TWatchdog, {logToggle}>
+                        .{method}(new(agent_), plan, watchdog);
+                }}
+                else
+                {{
+                    {returnKeyword} PlanBuilderIterator<AgentWrapperPoolGoal<TWorldState, TAction, TGoal>, TWorldState, TAction, TGoal, TWatchdog, {logToggle}>
                         .{method}(new(agent_), plan, watchdog{logArgument});
                 }}
-                if (goalMerge)
-                    return PlanBuilderIterator<AgentWrapperPoolGoalMergeGoal<TWorldState, TAction, TGoal>, TWorldState, TAction, TGoal, TWatchdog, {logToggle}>
-                        .{method}(new(agent_), plan, watchdog);
-                return PlanBuilderIterator<AgentWrapperPoolGoal<TWorldState, TAction, TGoal>, TWorldState, TAction, TGoal, TWatchdog, {logToggle}>
-                    .{method}(new(agent_), plan, watchdog{logArgument});
             }}
-
-            if (worldStatePool)
+            else if (worldStatePool)
             {{
                 if (goalMerge)
-                    return PlanBuilderIterator<AgentWrapperPoolWorldMergeGoal<TWorldState, TAction, TGoal>, TWorldState, TAction, TGoal, TWatchdog, {logToggle}>
+                {{
+                    {returnKeyword} PlanBuilderIterator<AgentWrapperPoolWorldMergeGoal<TWorldState, TAction, TGoal>, TWorldState, TAction, TGoal, TWatchdog, {logToggle}>
                         .{method}(new(agent_), plan, watchdog{logArgument});
-                return PlanBuilderIterator<AgentWrapperPoolWorld<TWorldState, TAction, TGoal>, TWorldState, TAction, TGoal, TWatchdog, {logToggle}>
+                }}
+                else
+                {{
+                    {returnKeyword} PlanBuilderIterator<AgentWrapperPoolWorld<TWorldState, TAction, TGoal>, TWorldState, TAction, TGoal, TWatchdog, {logToggle}>
+                        .{method}(new(agent_), plan, watchdog{logArgument});
+                }}
+            }}
+            else if (goalMerge)
+            {{
+                {returnKeyword} PlanBuilderIterator<AgentWrapperMergeGoal<TWorldState, TAction, TGoal>, TWorldState, TAction, TGoal, TWatchdog, {logToggle}>
                     .{method}(new(agent_), plan, watchdog{logArgument});
             }}
-
-            if (goalMerge)
-                return PlanBuilderIterator<AgentWrapperMergeGoal<TWorldState, TAction, TGoal>, TWorldState, TAction, TGoal, TWatchdog, {logToggle}>
+            else
+            {{
+                {returnKeyword} PlanBuilderIterator<AgentWrapper<TWorldState, TAction, TGoal>, TWorldState, TAction, TGoal, TWatchdog, {logToggle}>
                     .{method}(new(agent_), plan, watchdog{logArgument});
-
-            return PlanBuilderIterator<AgentWrapper<TWorldState, TAction, TGoal>, TWorldState, TAction, TGoal, TWatchdog, {logToggle}>
-                .{method}(new(agent_), plan, watchdog{logArgument});
+            }}
         }}
     }}
 }}
 ");
     }
 
-        private static string GetDocumentation(bool hasLog, string watchdogName, string watchdogDescription, bool indexed)
+        private static string GetDocumentation(bool hasLog, string watchdogName, string watchdogDescription)
             => @$"
         /// <summary>
         /// Uses GOAP to computes how to complete the goal with the lowest cost from <paramref name=""agent""/>.
@@ -189,7 +216,7 @@ namespace Enderlook.GOAP
         /// <param name=""agent"">Agent where world state, goals and available actions are got.<br/>
         /// This type can implement the following interfaces for additional features:
         /// <see cref=""IGoalMerge{{TGoal}}""/>, <see cref=""IGoalPool{{TGoal}}""/>, <see cref=""IWorldStatePool{{TWorld}}""/>.</param>
-        /// <param name=""plan"">Collection where actions required to complete the goal will be stored.{(indexed ? @" Values represent the index of each action gotten from <see cref=""IAgent{TWorldState, TGoal, TAction}.GetActions""/>." : "")}</param>
+        /// <param name=""plan"">Collection where actions required to complete the goal will be stored.</param>
         {(watchdogName == "" ? @"/// <param name=""watchdog"">Token used to cancelate or suspend the execution </param>" : watchdogName is null ? "" : @$"/// <param name=""{watchdogName}"">{watchdogDescription}</param>")}
         {(hasLog ? @"/// <param name=""log"">Log action used to debug the planification. The layout of the log content is an implementation detail.</param>" : "")}
         /// <returns></returns>

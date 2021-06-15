@@ -3,8 +3,18 @@
     /// <summary>
     /// Determines the result of a plan.
     /// </summary>
-    internal enum PlanResultMode
+    internal enum PlanMode
     {
+        /// <summary>
+        /// Instance is default.
+        /// </summary>
+        None = default,
+
+        /// <summary>
+        /// Plan is in progress.
+        /// </summary>
+        InProgress,
+
         /// <summary>
         /// A plan to reach the requested goal was found.
         /// </summary>

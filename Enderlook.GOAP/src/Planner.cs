@@ -18,6 +18,9 @@ namespace Enderlook.GOAP
         private static void ThrowNullWatchdogException() => throw new ArgumentNullException("watchdog");
 
         [DoesNotReturn]
+        private static void ThrowPlanIsInProgress() => throw new ArgumentException("plan", "Plan is already in progress.");
+
+        [DoesNotReturn]
         private static void ThrowNullLogException() => throw new ArgumentNullException("log", "Use the overload without log parameter instead.");
     }
 }

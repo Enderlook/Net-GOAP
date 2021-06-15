@@ -2,12 +2,10 @@
 using Enderlook.Collections.LowLevel;
 
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
-[assembly:InternalsVisibleTo("ConsoleApp2")]
+
 namespace Enderlook.GOAP
 {
     internal sealed partial class PlanBuilderState<TWorldState, TGoal, TAction>
@@ -66,97 +64,11 @@ namespace Enderlook.GOAP
                 AppendAndLog("Cancelled.");
         }
 
-        internal PlanResult<int, int> Finalize<TAgent, TLog>(Stack<int> plan)
+        internal void Finalize<TAgent, TLog>(Plan<TGoal, TAction> plan)
         {
             Debug.Assert(typeof(TAgent).IsValueType, $"{nameof(TAgent)} must be a value type to constant propagate type checks.");
             Debug.Assert(plan is not null);
 
-            switch (FinalizeStart<TLog>())
-            {
-                case PlanResultMode.Cancelled:
-                    return PlanResult<int, int>.Cancelled;
-                case PlanResultMode.NotFound:
-                    return PlanResult<int, int>.NotFound;
-            }
-
-            int actionsCount = plan.Count;
-
-            int index = endNode;
-            int lastIndex = index;
-            int goalIndex;
-            while (true)
-            {
-                ref PathNode node = ref nodes[index];
-                index = node.Parent;
-                if (index == -1)
-                {
-                    goalIndex = node.Goals;
-                    break;
-                }
-                lastIndex = index;
-
-                plan.Push(node.Action);
-            }
-
-            FinalizeEnd<TLog>(plan, actionsCount, lastIndex);
-
-            return new(PlanResultMode.FoundPlan, plan, goalIndex, cost);
-        }
-
-        internal PlanResult<TGoal, TAction> Finalize<TAgent, TLog>(Stack<TAction> plan)
-        {
-            Debug.Assert(typeof(TAgent).IsValueType, $"{nameof(TAgent)} must be a value type to constant propagate type checks.");
-            Debug.Assert(plan is not null);
-
-            switch (FinalizeStart<TLog>())
-            {
-                case PlanResultMode.Cancelled:
-                    return PlanResult<TGoal, TAction>.Cancelled;
-                case PlanResultMode.NotFound:
-                    return PlanResult<TGoal, TAction>.NotFound;
-            }
-
-            int actionsCount = plan.Count;
-
-            int index = endNode;
-            int lastIndex = index;
-            int goalIndex;
-            while (true)
-            {
-                ref PathNode node = ref nodes[index];
-                index = node.Parent;
-                if (index == -1)
-                {
-                    goalIndex = node.Goals;
-                    break;
-                }
-                lastIndex = index;
-
-                plan.Push(actions[node.Action]);
-            }
-
-            FinalizeEnd<TLog>(plan, actionsCount, lastIndex);
-
-            return new(PlanResultMode.FoundPlan, plan, goals[goalIndex].Goal, cost);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void FinalizeEnd<TLog>(ICollection plan, int actionsCount, int lastIndex)
-        {
-            if (Toggle.IsOn<TLog>())
-            {
-                builder.Append("\nLength of plan ").Append(plan.Count - actionsCount).Append('.');
-                Log();
-            }
-
-            endNode = lastIndex;
-
-            state |= State.Finalized;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private PlanResultMode FinalizeStart<TLog>()
-        {
             if ((state & State.Cancelled) != 0)
             {
                 if (Toggle.IsOn<TLog>())
@@ -166,7 +78,7 @@ namespace Enderlook.GOAP
                     builder.Append("\nTotal goals stored: ").Append(goals.Count).Append('.');
                     builder.Append("\nRemaining nodes to visit: ").Append(toVisit.Count).Append('.');
                 }
-                return PlanResultMode.Cancelled;
+                plan.SetCancelled();
             }
 
             if ((state & State.Found) == 0)
@@ -178,7 +90,7 @@ namespace Enderlook.GOAP
                     builder.Append("\nTotal goals stored: ").Append(goals.Count).Append('.');
                     builder.Append("\nRemaining nodes to visit: ").Append(toVisit.Count).Append('.');
                 }
-                return PlanResultMode.NotFound;
+                plan.SetNotFound();
             }
 
             if (Toggle.IsOn<TLog>())
@@ -191,7 +103,34 @@ namespace Enderlook.GOAP
                 builder.Append("\nRemaining nodes to visit: ").Append(toVisit.Count).Append('.');
             }
 
-            return PlanResultMode.FoundPlan;
+            int index = endNode;
+            int lastIndex = index;
+            int goalIndex;
+            while (true)
+            {
+                ref PathNode node = ref nodes[index];
+                index = node.Parent;
+                if (index == -1)
+                {
+                    goalIndex = node.Goals;
+                    break;
+                }
+                lastIndex = index;
+
+                plan.AddActionToPlan(node.Action);
+            }
+
+            if (Toggle.IsOn<TLog>())
+            {
+                builder.Append("\nLength of plan ").Append(plan.PlanCountInternal()).Append('.');
+                Log();
+            }
+
+            endNode = lastIndex;
+
+            state |= State.Finalized;
+
+            plan.SetFound(ref actions, cost, goalIndex, goals[goalIndex].Goal);
         }
 
         public void Clear<TAgent>(TAgent agent)

@@ -18,28 +18,23 @@ namespace Enderlook.GOAP
         private TAgent agent;
         private PlanBuilderState<TWorldState, TGoal, TAction>? builder;
         private TWatchdog watchdog;
-        private object plan;
+        public Plan<TGoal, TAction> Plan { get; }
         private float lastCost;
 
-        private PlanBuilderIterator(TAgent agent, Stack<TAction> plan, TWatchdog watchdog, Action<string>? log = null)
-            : this(agent, (object)plan, watchdog, log) { }
-
-        private PlanBuilderIterator(TAgent agent, Stack<int> plan, TWatchdog watchdog, Action<string>? log = null)
-            : this(agent, (object)plan, watchdog, log) { }
-
-        private PlanBuilderIterator(TAgent agent, object plan, TWatchdog watchdog, Action<string>? log = null)
+        private PlanBuilderIterator(TAgent agent, Plan<TGoal, TAction> plan, TWatchdog watchdog, Action<string>? log = null)
         {
             Debug.Assert(typeof(TAgent).IsValueType, $"{nameof(TAgent)} must be a value type to constant propagate type checks.");
             Toggle.Assert<TLog>();
 
             Debug.Assert(agent is not null);
             Debug.Assert(plan is not null);
-            Debug.Assert(plan is Stack<int> || plan is Stack<TAction>);
             Debug.Assert(watchdog is not null);
 
             this.agent = agent;
-            this.plan = plan;
+            Plan = plan;
             this.watchdog = watchdog;
+
+            plan.SetInProgress();
 
             lastCost = 0;
             builder = Pool<PlanBuilderState<TWorldState, TGoal, TAction>>.Get();
@@ -61,7 +56,7 @@ namespace Enderlook.GOAP
             builder = null;
         }
 
-        public static PlanResult<TGoal, TAction> RunAndDispose(TAgent agent, Stack<TAction> plan, TWatchdog watchdog, Action<string>? log = null)
+        public static void RunAndDispose(TAgent agent, Plan<TGoal, TAction> plan, TWatchdog watchdog, Action<string>? log = null)
         {
             using PlanBuilderIterator<TAgent, TWorldState, TAction, TGoal, TWatchdog, TLog> iterator = new(agent, plan, watchdog, log);
             iterator.Initialize();
@@ -78,30 +73,10 @@ namespace Enderlook.GOAP
                 }
             }
             end:
-            return iterator.FinalizeTyped();
+            iterator.Finalize_();
         }
 
-        public static PlanResult<int, int> RunAndDispose(TAgent agent, Stack<int> plan, TWatchdog watchdog, Action<string>? log = null)
-        {
-            using PlanBuilderIterator<TAgent, TWorldState, TAction, TGoal, TWatchdog, TLog> iterator = new(agent, plan, watchdog, log);
-            iterator.Initialize();
-            while (true)
-            {
-                switch (iterator.MoveNext())
-                {
-                    case PlanningCoroutineResult.Cancelled:
-                    case PlanningCoroutineResult.Finalized:
-                        goto end;
-                    case PlanningCoroutineResult.Suspended:
-                        Thread.Yield();
-                        break;
-                }
-            }
-            end:
-            return iterator.FinalizeInt();
-        }
-
-        public static async ValueTask<PlanResult<TGoal, TAction>> RunAndDisposeAsync(TAgent agent, Stack<TAction> plan, TWatchdog watchdog, Action<string>? log = null)
+        public static async ValueTask RunAndDisposeAsync(TAgent agent, Plan<TGoal, TAction> plan, TWatchdog watchdog, Action<string>? log = null)
         {
             using PlanBuilderIterator<TAgent, TWorldState, TAction, TGoal, TWatchdog, TLog> iterator = new(agent, plan, watchdog, log);
             iterator.Initialize();
@@ -118,33 +93,10 @@ namespace Enderlook.GOAP
                 }
             }
             end:
-            return iterator.FinalizeTyped();
+            iterator.Finalize_();
         }
 
-        public static async ValueTask<PlanResult<int, int>> RunAndDisposeAsync(TAgent agent, Stack<int> plan, TWatchdog watchdog, Action<string>? log = null)
-        {
-            using PlanBuilderIterator<TAgent, TWorldState, TAction, TGoal, TWatchdog, TLog> iterator = new(agent, plan, watchdog, log);
-            iterator.Initialize();
-            while (true)
-            {
-                switch (iterator.MoveNext())
-                {
-                    case PlanningCoroutineResult.Cancelled:
-                    case PlanningCoroutineResult.Finalized:
-                        goto end;
-                    case PlanningCoroutineResult.Suspended:
-                        await Task.Yield();
-                        break;
-                }
-            }
-            end:
-            return iterator.FinalizeInt();
-        }
-
-        public static PlanningCoroutine<TAgent, TWorldState, TGoal, TAction, TWatchdog, TLog, TGoal, TAction> RunAndDisposeCorotuine(TAgent agent, Stack<TAction> plan, TWatchdog watchdog, Action<string>? log = null)
-            => new(new(agent, plan, watchdog, log));
-
-        public static PlanningCoroutine<TAgent, TWorldState, TGoal, TAction, TWatchdog, TLog, int, int> RunAndDisposeCorotuine(TAgent agent, Stack<int> plan, TWatchdog watchdog, Action<string>? log = null)
+        public static PlanningCoroutine<TAgent, TWorldState, TGoal, TAction, TWatchdog, TLog> RunAndDisposeCorotuine(TAgent agent, Plan<TGoal, TAction> plan, TWatchdog watchdog, Action<string>? log = null)
             => new(new(agent, plan, watchdog, log));
 
         public void Initialize()
@@ -153,18 +105,10 @@ namespace Enderlook.GOAP
             GetActions();
         }
 
-        public PlanResult<TGoal, TAction> FinalizeTyped()
+        public void Finalize_()
         {
             Debug.Assert(builder is not null, "Is disposed.");
-            Debug.Assert(plan is Stack<TAction>);
-            return builder.Finalize<TAgent, TLog>((Stack<TAction>)plan);
-        }
-
-        public PlanResult<int, int> FinalizeInt()
-        {
-            Debug.Assert(builder is not null, "Is disposed.");
-            Debug.Assert(plan is Stack<TAction>);
-            return builder.Finalize<TAgent, TLog>((Stack<int>)plan);
+            builder.Finalize<TAgent, TLog>(Plan);
         }
 
         public PlanningCoroutineResult MoveNext()
