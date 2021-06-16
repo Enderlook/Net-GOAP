@@ -9,7 +9,13 @@ namespace Enderlook.GOAP
     public static partial class Planner
     {
         [DoesNotReturn]
-        private static void ThrowNullAgentException() => throw new ArgumentNullException("agent");
+        private static void ThrowNullWorldStateException() => throw new ArgumentNullException("worldState");
+
+        [DoesNotReturn]
+        private static void ThrowNullGoalsException() => throw new ArgumentNullException("goals");
+
+        [DoesNotReturn]
+        private static void ThrowNullActionsException() => throw new ArgumentNullException("actions");
 
         [DoesNotReturn]
         private static void ThrowNullPlanException() => throw new ArgumentNullException("plan");
@@ -22,5 +28,8 @@ namespace Enderlook.GOAP
 
         [DoesNotReturn]
         private static void ThrowNullLogException() => throw new ArgumentNullException("log", "Use the overload without log parameter instead.");
+
+        [DoesNotReturn]
+        private static void ThrowInvalidHelperType() => throw new ArgumentException("helper", "Must implement any of: IGoalPool<>, IGoalMerge<> or IWorldStatePool<> using the correct parameter types.");
     }
 }

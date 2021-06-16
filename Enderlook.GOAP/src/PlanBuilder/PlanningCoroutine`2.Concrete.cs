@@ -10,9 +10,9 @@ namespace Enderlook.GOAP
         where TAction : IAction<TWorldState, TGoal>
         where TWatchdog : IWatchdog
     {
-        private PlanBuilderIterator<TAgent, TWorldState, TAction, TGoal, TWatchdog, TLog> iterator;
+        private PlanBuilderIterator<TAgent, TWorldState, TGoal, TAction, TWatchdog, TLog> iterator;
 
-        public PlanningCoroutine(PlanBuilderIterator<TAgent, TWorldState, TAction, TGoal, TWatchdog, TLog> iterator)
+        public PlanningCoroutine(PlanBuilderIterator<TAgent, TWorldState, TGoal, TAction, TWatchdog, TLog> iterator)
         {
             this.iterator = iterator;
             state = Initialize;

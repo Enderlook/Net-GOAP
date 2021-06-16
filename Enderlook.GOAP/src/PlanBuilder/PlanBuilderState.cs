@@ -2,6 +2,7 @@
 using Enderlook.Collections.LowLevel;
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -46,6 +47,9 @@ namespace Enderlook.GOAP
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int ActionsCount() => actions.Count;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int NodesCount() => nodes.Count;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public string GetActionText(int index) => actionsText[index];

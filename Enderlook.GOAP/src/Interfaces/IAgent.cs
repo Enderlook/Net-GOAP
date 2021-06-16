@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-
-namespace Enderlook.GOAP
+﻿namespace Enderlook.GOAP
 {
     /// <summary>
     /// Describes an agent.
@@ -8,7 +6,7 @@ namespace Enderlook.GOAP
     /// <typeparam name="TWorldState">Type of world state.</typeparam>
     /// <typeparam name="TGoal">Type of goal.</typeparam>
     /// <typeparam name="TAction">Type of action.</typeparam>
-    public interface IAgent<TWorldState, TGoal, TAction>
+    internal interface IAgent<TWorldState, TGoal, TAction>
         where TWorldState : IWorldState<TWorldState>
         where TGoal : IGoal<TWorldState>
         where TAction : IAction<TWorldState, TGoal>
@@ -20,15 +18,17 @@ namespace Enderlook.GOAP
         TWorldState GetWorldState();
 
         /// <summary>
-        /// Get all the possible goals that this agent want to complete.
+        /// Set all the possible goals that this agent want to complete.
         /// </summary>
-        /// <returns>All the goals that this agent want to complete.</returns>
-        IEnumerator<TGoal> GetGoals();
+        void SetGoals<TAgent, TWatchdog, TLog>(ref PlanBuilderIterator<TAgent, TWorldState, TGoal, TAction, TWatchdog, TLog> builder)
+            where TAgent : IAgent<TWorldState, TGoal, TAction>
+            where TWatchdog : IWatchdog;
 
         /// <summary>
-        /// Get all the actions that this agent can do.
+        /// Set all the actions that this agent can do.
         /// </summary>
-        /// <returns>All the actions that this agent can do.</returns>
-        IEnumerator<TAction> GetActions();
+        void SetActions<TAgent, TWatchdog, TLog>(ref PlanBuilderIterator<TAgent, TWorldState, TGoal, TAction, TWatchdog, TLog> builder)
+            where TAgent : IAgent<TWorldState, TGoal, TAction>
+            where TWatchdog : IWatchdog;
     }
 }

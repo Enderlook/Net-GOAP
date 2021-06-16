@@ -1,18 +1,16 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Enderlook.GOAP
 {
-    internal struct PlanBuilderIterator<TAgent, TWorldState, TAction, TGoal, TWatchdog, TLog> : IDisposable
+    internal struct PlanBuilderIterator<TAgent, TWorldState, TGoal, TAction, TWatchdog, TLog> : IDisposable
         where TAgent : IAgent<TWorldState, TGoal, TAction>
         where TWorldState : IWorldState<TWorldState>
-        where TAction : IAction<TWorldState, TGoal>
         where TGoal : IGoal<TWorldState>
+        where TAction : IAction<TWorldState, TGoal>
         where TWatchdog : IWatchdog
     {
         private TAgent agent;
@@ -58,7 +56,7 @@ namespace Enderlook.GOAP
 
         public static void RunAndDispose(TAgent agent, Plan<TGoal, TAction> plan, TWatchdog watchdog, Action<string>? log = null)
         {
-            using PlanBuilderIterator<TAgent, TWorldState, TAction, TGoal, TWatchdog, TLog> iterator = new(agent, plan, watchdog, log);
+            using PlanBuilderIterator<TAgent, TWorldState, TGoal, TAction, TWatchdog, TLog> iterator = new(agent, plan, watchdog, log);
             iterator.Initialize();
             while (true)
             {
@@ -78,7 +76,7 @@ namespace Enderlook.GOAP
 
         public static async ValueTask RunAndDisposeAsync(TAgent agent, Plan<TGoal, TAction> plan, TWatchdog watchdog, Action<string>? log = null)
         {
-            using PlanBuilderIterator<TAgent, TWorldState, TAction, TGoal, TWatchdog, TLog> iterator = new(agent, plan, watchdog, log);
+            using PlanBuilderIterator<TAgent, TWorldState, TGoal, TAction, TWatchdog, TLog> iterator = new(agent, plan, watchdog, log);
             iterator.Initialize();
             while (true)
             {
@@ -101,8 +99,72 @@ namespace Enderlook.GOAP
 
         public void Initialize()
         {
-            EnqueueGoals();
-            GetActions();
+            Debug.Assert(builder is not null, "Is disposed.");
+
+            TWorldState memory = agent.GetWorldState();
+
+            if (memory is null)
+            {
+                if (Toggle.IsOn<TLog>())
+                    builder.AppendAndLog("Error: world state is null.");
+                ThrowWorldStateIsNullException();
+            }
+
+            if (Toggle.IsOn<TLog>())
+            {
+                builder.AppendToLog("Start planning. Initial memory ");
+                builder.AppendAndLog(memory.ToString() ?? "<Null>");
+            }
+
+            agent.SetGoals(ref this);
+
+            Debug.Assert(builder is not null, "Is disposed.");
+            if (builder.NodesCount() == 0)
+            {
+                if (Toggle.IsOn<TLog>())
+                    builder.AppendAndLog("Error: goals is empty.");
+                ThrowGoalsIsEmptyException();
+            }
+
+            agent.SetActions(ref this);
+
+            if (Toggle.IsOn<TLog>())
+            {
+                Debug.Assert(builder is not null, "Is disposed.");
+                builder.AppendToLog("Actions (");
+                int actionsCount = builder.ActionsCount();
+                builder.AppendToLog(actionsCount);
+                builder.AppendToLog("):");
+
+                if (actionsCount == 0)
+                    builder.AppendAndLog("\n - <>");
+                else
+                {
+                    for (int i = 0; i < actionsCount; i++)
+                    {
+                        builder.AppendToLog("\n - ");
+                        builder.AppendToLog(builder.GetActionText(i));
+                    }
+                    builder.Log();
+                }
+            }
+
+            Debug.Assert(builder is not null, "Is disposed.");
+            if (builder.ActionsCount() == 0)
+            {
+                if (Toggle.IsOn<TLog>())
+                    builder.AppendAndLog("Error: actions is empty.");
+                ThrowActionsIsEmptyException();
+            }
+
+            [DoesNotReturn]
+            static void ThrowWorldStateIsNullException() => throw new InvalidOperationException("World state can't be null.");
+
+            [DoesNotReturn]
+            static void ThrowActionsIsEmptyException() => throw new InvalidOperationException("Must have at least one action.");
+
+            [DoesNotReturn]
+            static void ThrowGoalsIsEmptyException() => throw new InvalidOperationException("Must have at least one goal.");
         }
 
         public void Finalize_()
@@ -226,7 +288,7 @@ namespace Enderlook.GOAP
 
             return PlanningCoroutineResult.Finalized;
 
-            static void FoundValidPath(ref PlanBuilderIterator<TAgent, TWorldState, TAction, TGoal, TWatchdog, TLog> self, int id, float cost, int action, TWorldState newMemory)
+            static void FoundValidPath(ref PlanBuilderIterator<TAgent, TWorldState, TGoal, TAction, TWatchdog, TLog> self, int id, float cost, int action, TWorldState newMemory)
             {
                 if (typeof(IWorldStatePool<TWorldState>).IsAssignableFrom(typeof(TAgent)))
                     ((IWorldStatePool<TWorldState>)self.agent).Return(newMemory);
@@ -241,131 +303,35 @@ namespace Enderlook.GOAP
             static void ThrowInvalidWatchdogResultException() => throw new InvalidOperationException($"Returned value is not a valid value of {nameof(WatchdogResult)}.");
         }
 
-        private void GetActions()
+        internal void AddAction(TAction action)
         {
             Debug.Assert(builder is not null, "Is disposed.");
 
-            using IEnumerator<TAction>? actions = agent.GetActions();
+            if (action is null)
+                ThrowActionIsNullException();
 
-            if (actions is null)
-            {
-                if (Toggle.IsOn<TLog>())
-                    builder.AppendAndLog("Error: actions is null.");
-                ThrowActionsIsNullException();
-            }
-
-            while (actions.MoveNext())
-            {
-                TAction current = actions.Current;
-
-                if (current is null)
-                    ThrowActionIsNullException();
-
-                builder.AddAction<TLog>(current);
-            }
-
-            if (Toggle.IsOn<TLog>())
-            {
-                builder.AppendToLog("Actions (");
-                int actionsCount = builder.ActionsCount();
-                builder.AppendToLog(actionsCount);
-                builder.AppendToLog("):");
-
-                if (actionsCount == 0)
-                    builder.AppendAndLog("\n - <>");
-                else
-                {
-                    for (int i = 0; i < actionsCount; i++)
-                    {
-                         builder.AppendToLog("\n - ");
-                         builder.AppendToLog(builder.GetActionText(i));
-                    }
-                    builder.Log();
-                }
-            }
-
-            if (builder.ActionsCount() == 0)
-            {
-                if (Toggle.IsOn<TLog>())
-                    builder.AppendAndLog("Error: actions is empty.");
-                ThrowActionsIsEmptyException();
-            }
-
-            [DoesNotReturn]
-            static void ThrowActionsIsEmptyException() => throw new InvalidOperationException("Must have at least one action.");
-
-            [DoesNotReturn]
-            static void ThrowActionsIsNullException() => throw new InvalidOperationException("Actions can't be null.");
+            builder.AddAction<TLog>(action);
 
             [DoesNotReturn]
             static void ThrowActionIsNullException() => throw new InvalidOperationException("Action can't be null.");
         }
 
-        private void EnqueueGoals()
+        internal void AddGoal(TGoal goal)
         {
             Debug.Assert(builder is not null, "Is disposed.");
 
             TWorldState memory = agent.GetWorldState();
 
-            if (memory is null)
-            {
-                if (Toggle.IsOn<TLog>())
-                    builder.AppendAndLog("Error: world state is null.");
-                ThrowWorldStateIsNullException();
-            }
+            if (goal is null)
+                ThrowGoalIsNullException();
 
-            if (Toggle.IsOn<TLog>())
-            {
-                builder.AppendToLog("Start planning. Initial memory ");
-                builder.AppendAndLog(memory.ToString() ?? "<Nulll>");
-            }
+            TWorldState newMemory;
+            if (typeof(IWorldStatePool<TWorldState>).IsAssignableFrom(typeof(TAgent)))
+                newMemory = ((IWorldStatePool<TWorldState>)agent).Clone(memory);
+            else
+                newMemory = memory.Clone();
 
-            using IEnumerator<TGoal> goals = agent.GetGoals();
-
-            if (goals is null)
-            {
-                if (Toggle.IsOn<TLog>())
-                    builder.AppendAndLog("Error: goals is null.");
-                ThrowGoalsIsNullException();
-            }
-
-            if (!goals.MoveNext())
-            {
-                if (Toggle.IsOn<TLog>())
-                    builder.AppendAndLog("Error: goals is empty.");
-                ThrowGoalsIsEmptyException();
-            }
-
-            EnqueueGoal(ref this);
-            while (goals.MoveNext())
-                EnqueueGoal(ref this);
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            void EnqueueGoal(ref PlanBuilderIterator<TAgent, TWorldState, TAction, TGoal, TWatchdog, TLog> self)
-            {
-                Debug.Assert(self.builder is not null, "Is disposed.");
-
-                TGoal current = goals.Current;
-                if (current is null)
-                    ThrowGoalIsNullException();
-
-                TWorldState newMemory;
-                if (typeof(IWorldStatePool<TWorldState>).IsAssignableFrom(typeof(TAgent)))
-                    newMemory = ((IWorldStatePool<TWorldState>)self.agent).Clone(memory);
-                else
-                    newMemory = memory.Clone();
-
-                self.builder.EnqueueGoal<TLog>(current, newMemory);
-            }
-
-            [DoesNotReturn]
-            static void ThrowWorldStateIsNullException() => throw new InvalidOperationException("World state can't be null.");
-
-            [DoesNotReturn]
-            static void ThrowGoalsIsEmptyException() => throw new InvalidOperationException("Must have at least one goal.");
-
-            [DoesNotReturn]
-            static void ThrowGoalsIsNullException() => throw new InvalidOperationException("Goals can't be null.");
+            builder.EnqueueGoal<TLog>(goal, newMemory);
 
             [DoesNotReturn]
             static void ThrowGoalIsNullException() => throw new InvalidOperationException("Goal can't be null.");
