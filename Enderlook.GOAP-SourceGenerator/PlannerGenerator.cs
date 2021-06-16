@@ -50,12 +50,14 @@ namespace Enderlook.GOAP
                 Mode.Coroutine => "RunAndDisposeCorotuine",
             };
 
-            string postfix = (helper ? "WithHelper" : "") + mode switch
+            string postfix_ = mode switch
             {
                 Mode.Sync => "",
                 Mode.Async => "Async",
                 Mode.Coroutine => "Coroutine",
             };
+
+            string postfix = (helper ? "WithHelper" : "") + postfix_;
 
             string returnKeyword = mode switch
             {
@@ -65,9 +67,10 @@ namespace Enderlook.GOAP
 
             bool returns = mode != Mode.Sync;
 
-            string helperGenericParameter = helper ? ", THelper" : "";
+            string helperGenericParameterMethod = helper ? ", THelper" : "";
+            string helperGenericParameterCall = helper ? ", THelper" : ", Unused";
             string helperParameter = helper ? ", THelper helper" : "";
-            string helperArgument = helper ? ", helper" : "";
+            string helperArgument = helper ? ", helper" : ", new()";
 
             return (name, $@"
 using System;
@@ -88,7 +91,7 @@ namespace Enderlook.GOAP
         }.Select(e => @$"
         {GetDocumentation(true, e.parameterName, e.description)}
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static {resultType} PlanCheapestGoal{postfix}<TWorldState, TGoal, TAction, TGoals, TActions{helperGenericParameter}>(
+        public static {resultType} PlanCheapestGoal{postfix}<TWorldState, TGoal, TAction, TGoals, TActions{helperGenericParameterMethod}>(
             TWorldState worldState, TGoals goals, TActions actions, Plan<TGoal, TAction> plan{(e.parameterType is null ? "" : $", {e.parameterType} {e.parameterName}")}{helperParameter}, Action<string> log = null)
             where TWorldState : IWorldState<TWorldState>
             where TGoal : IGoal<TWorldState>
@@ -97,14 +100,14 @@ namespace Enderlook.GOAP
             where TActions : IEnumerable<TAction>
         {{
             if (log is null)
-                {returnKeyword} PlanInner{postfix}<TWorldState, TGoal, TAction, TGoals, TActions, {e.type}{helperGenericParameter}, Toggle.No>(worldState, goals, actions, plan, new {e.type}({e.parameterName}){helperArgument}, log);
+                {returnKeyword} PlanInner{postfix_}<TWorldState, TGoal, TAction, TGoals, TActions, {e.type}{helperGenericParameterCall}, Toggle.No>(worldState, goals, actions, plan, new {e.type}({e.parameterName}){helperArgument}, log);
             else
-                {returnKeyword} PlanInner{postfix}<TWorldState, TGoal, TAction, TGoals, TActions, {e.type}{helperGenericParameter}, Toggle.Yes>(worldState, goals, actions, plan, new {e.type}({e.parameterName}){helperArgument}, log);
+                {returnKeyword} PlanInner{postfix_}<TWorldState, TGoal, TAction, TGoals, TActions, {e.type}{helperGenericParameterCall}, Toggle.Yes>(worldState, goals, actions, plan, new {e.type}({e.parameterName}){helperArgument}, log);
         }}
 
         {GetDocumentation( true, e.parameterName, e.description)}
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static {resultType} Plan{postfix}<TWorldState, TGoal, TAction, TActions{helperGenericParameter}>(
+        public static {resultType} Plan{postfix}<TWorldState, TGoal, TAction, TActions{helperGenericParameterMethod}>(
             TWorldState worldState, TGoal goal, TActions actions, Plan<TGoal, TAction> plan{(e.parameterType is null ? "" : $", {e.parameterType} {e.parameterName}")}{helperParameter}, Action<string> log = null)
             where TWorldState : IWorldState<TWorldState>
             where TGoal : IGoal<TWorldState>
@@ -112,15 +115,15 @@ namespace Enderlook.GOAP
             where TActions : IEnumerable<TAction>
         {{
             if (log is null)
-                {returnKeyword} PlanInner{postfix}<TWorldState, TGoal, TAction, SingleElementList<TGoal>, TActions, {e.type}{helperGenericParameter}, Toggle.No>(worldState, new(goal), actions, plan, new {e.type}({e.parameterName}){helperArgument}, log);
+                {returnKeyword} PlanInner{postfix_}<TWorldState, TGoal, TAction, SingleElementList<TGoal>, TActions, {e.type}{helperGenericParameterCall}, Toggle.No>(worldState, new(goal), actions, plan, new {e.type}({e.parameterName}){helperArgument}, log);
             else
-                {returnKeyword} PlanInner{postfix}<TWorldState, TGoal, TAction, SingleElementList<TGoal>, TActions, {e.type}{helperGenericParameter}, Toggle.Yes>(worldState, new(goal), actions, plan, new {e.type}({e.parameterName}){helperArgument}, log);
+                {returnKeyword} PlanInner{postfix_}<TWorldState, TGoal, TAction, SingleElementList<TGoal>, TActions, {e.type}{helperGenericParameterCall}, Toggle.Yes>(worldState, new(goal), actions, plan, new {e.type}({e.parameterName}){helperArgument}, log);
         }}
         "))}
 
         {GetDocumentation(true, "", null)}
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static {resultType} PlanCheapestGoal{postfix}<TWorldState, TGoal, TAction, TGoals, TActions, TWatchdog{helperGenericParameter}>(
+        public static {resultType} PlanCheapestGoal{postfix}<TWorldState, TGoal, TAction, TGoals, TActions, TWatchdog{helperGenericParameterMethod}>(
             TWorldState worldState, TGoals goals, TActions actions, Plan<TGoal, TAction> plan, TWatchdog watchdog{helperParameter}, Action<string> log)
             where TWorldState : IWorldState<TWorldState>
             where TGoal : IGoal<TWorldState>
@@ -130,14 +133,14 @@ namespace Enderlook.GOAP
             where TWatchdog : IWatchdog
         {{
             if (log is null)
-                {returnKeyword} PlanInner{postfix}<TWorldState, TGoal, TAction, TGoals, TActions, TWatchdog{helperGenericParameter}, Toggle.Yes>(worldState, goals, actions, plan, watchdog{helperArgument}, log);
+                {returnKeyword} PlanInner{postfix_}<TWorldState, TGoal, TAction, TGoals, TActions, TWatchdog{helperGenericParameterCall}, Toggle.Yes>(worldState, goals, actions, plan, watchdog{helperArgument}, log);
             else
-                {returnKeyword} PlanInner{postfix}<TWorldState, TGoal, TAction, TGoals, TActions, TWatchdog{helperGenericParameter}, Toggle.No>(worldState, goals, actions, plan, watchdog{helperArgument}, log);
+                {returnKeyword} PlanInner{postfix_}<TWorldState, TGoal, TAction, TGoals, TActions, TWatchdog{helperGenericParameterCall}, Toggle.No>(worldState, goals, actions, plan, watchdog{helperArgument}, log);
         }}
 
         {GetDocumentation(false, "", null)}
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static {resultType} Plan{postfix}<TWorldState, TGoal, TAction, TActions, TWatchdog{helperGenericParameter}>(
+        public static {resultType} Plan{postfix}<TWorldState, TGoal, TAction, TActions, TWatchdog{helperGenericParameterMethod}>(
             TWorldState worldState, TGoal goal, TActions actions, Plan<TGoal, TAction> plan, TWatchdog watchdog{helperParameter}, Action<string> log = null)
             where TWorldState : IWorldState<TWorldState>
             where TGoal : IGoal<TWorldState>
@@ -146,13 +149,14 @@ namespace Enderlook.GOAP
             where TWatchdog : IWatchdog
         {{
             if (log is null)
-                {returnKeyword} PlanInner{postfix}<TWorldState, TGoal, TAction, SingleElementList<TGoal>, TActions, TWatchdog{helperGenericParameter}, Toggle.No>(worldState, new(goal), actions, plan, watchdog{helperArgument}, log);
+                {returnKeyword} PlanInner{postfix_}<TWorldState, TGoal, TAction, SingleElementList<TGoal>, TActions, TWatchdog{helperGenericParameterCall}, Toggle.No>(worldState, new(goal), actions, plan, watchdog{helperArgument}, log);
             else
-                {returnKeyword} PlanInner{postfix}<TWorldState, TGoal, TAction, SingleElementList<TGoal>, TActions, TWatchdog{helperGenericParameter}, Toggle.Yes>(worldState, new(goal), actions, plan, watchdog{helperArgument}, log);
+                {returnKeyword} PlanInner{postfix_}<TWorldState, TGoal, TAction, SingleElementList<TGoal>, TActions, TWatchdog{helperGenericParameterCall}, Toggle.Yes>(worldState, new(goal), actions, plan, watchdog{helperArgument}, log);
         }}
 
-        private static {resultType} PlanInner{postfix}<TWorldState, TGoal, TAction, TGoals, TActions, TWatchdog{helperGenericParameter}, TLog>(
-            TWorldState worldState, TGoals goals, TActions actions, Plan<TGoal, TAction> plan, TWatchdog watchdog{helperParameter}, Action<string> log)
+        {(!helper ? "" : $@"
+        private static {resultType} PlanInner{postfix_}<TWorldState, TGoal, TAction, TGoals, TActions, TWatchdog, THelper, TLog>(
+            TWorldState worldState, TGoals goals, TActions actions, Plan<TGoal, TAction> plan, TWatchdog watchdog, THelper helper, Action<string> log)
             where TWorldState : IWorldState<TWorldState>
             where TGoal : IGoal<TWorldState>
             where TAction : IAction<TWorldState, TGoal>
@@ -175,10 +179,10 @@ namespace Enderlook.GOAP
             if (Toggle.IsOn<TLog>())
                 Debug.Assert(log is not null, ""Log was enabled but it's null"");
 
-            {(!helper ? @$"
-            {returnKeyword} PlanBuilderIterator<AgentWrapper<TWorldState, TGoal, TAction, TGoals, TActions>, TWorldState, TGoal, TAction, TWatchdog, TLog>
-                    .{method}(new(worldState, goals, actions), plan, watchdog, log);"
-            : @$"
+            if (typeof(THelper) == typeof(Unused))
+                {returnKeyword} PlanBuilderIterator<AgentWrapper<TWorldState, TGoal, TAction, TGoals, TActions>, TWorldState, TGoal, TAction, TWatchdog, TLog>
+                    .{method}(new(worldState, goals, actions), plan, watchdog, log);
+
             Type helperType = typeof(THelper).IsValueType ? typeof(THelper) : helper.GetType();
 
             bool goalPool = typeof(IGoalPool<TGoal>).IsAssignableFrom(helperType);
@@ -234,8 +238,8 @@ namespace Enderlook.GOAP
                 ThrowInvalidHelperType();
                 {(returns ? "return default;" : "")}
             }}
-            ")}
         }}
+        ")}
     }}
 }}
 ");
