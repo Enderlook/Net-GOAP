@@ -92,9 +92,9 @@ namespace Enderlook.GOAP
             new { parameterName = "cost", parameterType = "float", type = "CostWatchdog", description = "Cancelates the execution of the plan if the plan cost is higher than this value." },
             new { parameterName = "", parameterType = (string)null, type = "EndlessWatchdog", description = "" },
         }.Select(e => @$"
-        {GetDocumentation(log, e.parameterName, e.description)}
+        {GetDocumentation(log, true, e.parameterName, e.description)}
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static {resultType} Plan{postfix}<TWorldState, TGoal, TAction, TGoals, TActions{helperGenericParameter}>(
+        public static {resultType} PlanCheapestGoal{postfix}<TWorldState, TGoal, TAction, TGoals, TActions{helperGenericParameter}>(
             TWorldState worldState, TGoals goals, TActions actions, Plan<TGoal, TAction> plan{(e.parameterType is null ? "" : $", {e.parameterType} {e.parameterName}")}{helperParameter}{logParameter})
             where TWorldState : IWorldState<TWorldState>
             where TGoal : IGoal<TWorldState>
@@ -102,11 +102,21 @@ namespace Enderlook.GOAP
             where TGoals : IEnumerable<TGoal>
             where TActions : IEnumerable<TAction>
             => PlanInner{postfix}<TWorldState, TGoal, TAction, TGoals, TActions, {e.type}{helperGenericParameter}>(worldState, goals, actions, plan, new {e.type}({e.parameterName}){helperArgument}{logArgument});
+
+        {GetDocumentation(log, true, e.parameterName, e.description)}
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static {resultType} Plan{postfix}<TWorldState, TGoal, TAction, TActions{helperGenericParameter}>(
+            TWorldState worldState, TGoal goal, TActions actions, Plan<TGoal, TAction> plan{(e.parameterType is null ? "" : $", {e.parameterType} {e.parameterName}")}{helperParameter}{logParameter})
+            where TWorldState : IWorldState<TWorldState>
+            where TGoal : IGoal<TWorldState>
+            where TAction : IAction<TWorldState, TGoal>
+            where TActions : IEnumerable<TAction>
+            => PlanInner{postfix}<TWorldState, TGoal, TAction, SingleElementList<TGoal>, TActions, {e.type}{helperGenericParameter}>(worldState, new(goal), actions, plan, new {e.type}({e.parameterName}){helperArgument}{logArgument});
         "))}
 
-        {GetDocumentation(log, "", null)}
+        {GetDocumentation(log, true, "", null)}
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static {resultType} Plan{postfix}<TWorldState, TGoal, TAction, TGoals, TActions, TWatchdog{helperGenericParameter}>(
+        public static {resultType} PlanCheapestGoal{postfix}<TWorldState, TGoal, TAction, TGoals, TActions, TWatchdog{helperGenericParameter}>(
             TWorldState worldState, TGoals goals, TActions actions, Plan<TGoal, TAction> plan, TWatchdog watchdog{helperParameter}{logParameter})
             where TWorldState : IWorldState<TWorldState>
             where TGoal : IGoal<TWorldState>
@@ -115,6 +125,17 @@ namespace Enderlook.GOAP
             where TActions : IEnumerable<TAction>
             where TWatchdog : IWatchdog
             => PlanInner{postfix}<TWorldState, TGoal, TAction, TGoals, TActions, TWatchdog{helperGenericParameter}>(worldState, goals, actions, plan, watchdog{helperArgument}{logArgument});
+
+        {GetDocumentation(log, false, "", null)}
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static {resultType} Plan{postfix}<TWorldState, TGoal, TAction, TActions, TWatchdog{helperGenericParameter}>(
+            TWorldState worldState, TGoal goal, TActions actions, Plan<TGoal, TAction> plan, TWatchdog watchdog{helperParameter}{logParameter})
+            where TWorldState : IWorldState<TWorldState>
+            where TGoal : IGoal<TWorldState>
+            where TAction : IAction<TWorldState, TGoal>
+            where TActions : IEnumerable<TAction>
+            where TWatchdog : IWatchdog
+            => PlanInner{postfix}<TWorldState, TGoal, TAction, SingleElementList<TGoal>, TActions, TWatchdog{helperGenericParameter}>(worldState, new(goal), actions, plan, watchdog{helperArgument}{logArgument});
 
         private static {resultType} PlanInner{postfix}<TWorldState, TGoal, TAction, TGoals, TActions, TWatchdog{helperGenericParameter}>(
             TWorldState worldState, TGoals goals, TActions actions, Plan<TGoal, TAction> plan, TWatchdog watchdog{helperParameter}{logParameter})
@@ -208,10 +229,11 @@ namespace Enderlook.GOAP
 ");
     }
 
-        private static string GetDocumentation(bool hasLog, string watchdogName, string watchdogDescription)
+        private static string GetDocumentation(bool hasLog, bool goals, string watchdogName, string watchdogDescription)
             => @$"
         /// <summary>
-        /// Uses GOAP to computes how to complete the goal with the lowest cost from <paramref name=""agent""/>.
+        /// {(goals ? @"Uses GOAP to computes how to complete the goal with the lowest cost from <paramref name=""agent""/>."
+                : "Uses GOAP to compute how to complete the provied goal.")}
         /// </summary>
         /// <typeparam name=""TAgent"">Type of agent.</typeparam>
         /// <typeparam name=""TWorldState"">Type of world state.</typeparam>
@@ -220,9 +242,11 @@ namespace Enderlook.GOAP
         /// This type can implement the following interfaces for additional features:
         /// <see cref=""IGoalMerge{{TGoal}}""/>, <see cref=""IGoalPool{{TGoal}}""/>, <see cref=""IWorldStatePool{{TWorld}}""/>.</param>
         /// <param name=""worldState"">Initial state of the world.</param>
-        /// <param name=""goals"">Goals to archive. Only the most cheap goal will be completed.</param>
+        {(goals ? @"/// <param name=""goals"">Goals to archive. Only the most cheap goal will be completed.</param>"
+            : @"/// <param name=""goal"">Goal to archive.</param>")}
         /// <param name=""actions"">Available actions to perform in the world.</param>
-        {(watchdogName == "" ? @"/// <param name=""watchdog"">Token used to cancelate or suspend the execution </param>" : watchdogName is null ? "" : @$"/// <param name=""{watchdogName}"">{watchdogDescription}</param>")}
+        {(watchdogName == "" ? @"/// <param name=""watchdog"">Token used to cancelate or suspend the execution </param>"
+            : watchdogName is null ? "" : @$"/// <param name=""{watchdogName}"">{watchdogDescription}</param>")}
         {(hasLog ? @"/// <param name=""log"">Log action used to debug the planification. The layout of the log content is an implementation detail.</param>" : "")}
         /// <exception cref=""ArgumentNullException"">Throw if <paramref name=""agent""/> is <see langword=""null""/>.</exception>
         /// <exception cref=""ArgumentNullException"">Throw if <paramref name=""worldState""/> is <see langword=""null""/>.</exception>
