@@ -24,9 +24,9 @@ namespace Enderlook.GOAP
         private static void ThrowNullWatchdogException() => throw new ArgumentNullException("watchdog");
 
         [DoesNotReturn]
-        private static void ThrowPlanIsInProgress() => throw new ArgumentException("plan", "Plan is already in progress.");
+        private static void ThrowPlanIsInProgressException() => throw new ArgumentException("plan", "Plan is already in progress.");
 
         [DoesNotReturn]
-        private static void ThrowInvalidHelperType() => throw new ArgumentException("helper", "Must implement any of: IGoalPool<>, IGoalMerge<> or IWorldStatePool<> using the correct parameter types.");
+        private static void ThrowInvalidHelperTypeException() => throw new ArgumentException("helper", "Must implement any of: IGoalPool<>, IGoalMerge<> or IWorldStatePool<> using the correct parameter types.");
     }
 }

@@ -175,7 +175,7 @@ namespace Enderlook.GOAP
             if (watchdog is null)
                 ThrowNullWatchdogException();
             if (plan.IsInProgress)
-                ThrowPlanIsInProgress();
+                ThrowPlanIsInProgressException();
             if (Toggle.IsOn<TLog>())
                 Debug.Assert(log is not null, ""Log was enabled but it's null"");
 
@@ -235,7 +235,7 @@ namespace Enderlook.GOAP
             }}
             else
             {{
-                ThrowInvalidHelperType();
+                ThrowInvalidHelperTypeException();
                 {(returns ? "return default;" : "")}
             }}
         }}
