@@ -27,9 +27,6 @@ namespace Enderlook.GOAP
         private static void ThrowPlanIsInProgress() => throw new ArgumentException("plan", "Plan is already in progress.");
 
         [DoesNotReturn]
-        private static void ThrowNullLogException() => throw new ArgumentNullException("log", "Use the overload without log parameter instead.");
-
-        [DoesNotReturn]
         private static void ThrowInvalidHelperType() => throw new ArgumentException("helper", "Must implement any of: IGoalPool<>, IGoalMerge<> or IWorldStatePool<> using the correct parameter types.");
     }
 }
