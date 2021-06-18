@@ -2,9 +2,12 @@
 
 namespace Enderlook.GOAP
 {
+    /// <summary>
+    /// Don't suspend nor cancelates the computation of a GOAP.
+    /// </summary>
     internal readonly struct EndlessWatchdog : IWatchdog
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public WatchdogResult Poll(float cost) => WatchdogResult.Continue;
+        WatchdogResult IWatchdog.Poll(float cost) => WatchdogResult.Continue;
     }
 }

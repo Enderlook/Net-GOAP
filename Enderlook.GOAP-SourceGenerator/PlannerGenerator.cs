@@ -85,8 +85,6 @@ namespace Enderlook.GOAP
     public static partial class Planner
     {{
         {string.Join("\n", new[] {
-            new { parameterName = "token", parameterType = "CancellationToken", type = "CancellableWatchdog", description = "Cancellation token." },
-            new { parameterName = "cost", parameterType = "float", type = "CostWatchdog", description = "Cancelates the execution of the plan if the plan cost is higher than this value." },
             new { parameterName = "", parameterType = (string)null, type = "EndlessWatchdog", description = "" },
         }.Select(e => @$"
         {GetDocumentation(true, e.parameterName, e.description)}
@@ -105,7 +103,7 @@ namespace Enderlook.GOAP
                 {returnKeyword} PlanInner{postfix_}<TWorldState, TGoal, TAction, TGoals, TActions, {e.type}{helperGenericParameterCall}, Toggle.Yes>(worldState, goals, actions, plan, new {e.type}({e.parameterName}){helperArgument}, log);
         }}
 
-        {GetDocumentation( true, e.parameterName, e.description)}
+        {GetDocumentation(true, e.parameterName, e.description)}
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static {resultType} Plan{postfix}<TWorldState, TGoal, TAction, TActions{helperGenericParameterMethod}>(
             TWorldState worldState, TGoal goal, TActions actions, Plan<TGoal, TAction> plan{(e.parameterType is null ? "" : $", {e.parameterType} {e.parameterName}")}{helperParameter}, Action<string> log = null)
