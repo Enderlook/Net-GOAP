@@ -29,53 +29,61 @@ namespace Enderlook.GOAP
 
         public override Plan<TGoal, TAction> GetAssociatedPlan() => iterator.Plan;
 
-        public override PlanningCoroutineResult MoveNext()
+        public override bool MoveNext()
         {
             if (state == Continue)
             {
-                switch (iterator.MoveNext())
+                while (true)
                 {
-                    case PlanningCoroutineResult.Suspended:
-                        return PlanningCoroutineResult.Suspended;
-                    case PlanningCoroutineResult.Cancelled:
-                        state = ToCancel;
-                        return PlanningCoroutineResult.Continue;
-                    case PlanningCoroutineResult.Finalized:
-                        state = ToFinalize;
-                        return PlanningCoroutineResult.Continue;
+                    PlanningCoroutineResult result = iterator.MoveNext();
+
+                    if (result != PlanningCoroutineResult.Continue)
+                        return Rare2();
+
+                    bool Rare2()
+                    {
+                        switch (result)
+                        {
+                            case PlanningCoroutineResult.Finalized:
+                                state = Finalized;
+                                iterator.Finalize_();
+                                return false;
+                            case PlanningCoroutineResult.Suspended:
+                                return true;
+                            case PlanningCoroutineResult.Cancelled:
+                                state = Cancelled;
+                                iterator.Finalize_();
+                                return false;
+                            default:
+                                Debug.Fail("Impossible state.");
+                                goto case PlanningCoroutineResult.Finalized;
+                        }
+                    }
                 }
-                return PlanningCoroutineResult.Continue;
             }
+            else
+                return Rare();
 
-            return Rare();
-
-            PlanningCoroutineResult Rare()
+            bool Rare()
             {
                 switch (state)
                 {
                     case Initialize:
                         iterator.Initialize();
                         state = Continue;
-                        return PlanningCoroutineResult.Continue;
-                    case ToCancel:
-                        state = Cancelled;
-                        iterator.Finalize_();
-                        return PlanningCoroutineResult.Cancelled;
-                    case ToFinalize:
-                        state = Finalized;
-                        iterator.Finalize_();
-                        return PlanningCoroutineResult.Finalized;
+                        return MoveNext();
                     case Disposed:
                         ThrowAlreadyDisposedException();
-                        return default;
+                        break;
                     case Finalized:
                     case Cancelled:
                         ThrowAlreadyFinalizedException();
-                        return default;
+                        break;
                     default:
                         Debug.Fail("Impossible state.");
-                        goto case Finalized;
+                        break;
                 }
+                return default;
             }
 
             static void ThrowAlreadyDisposedException() => throw new ObjectDisposedException("Planning");

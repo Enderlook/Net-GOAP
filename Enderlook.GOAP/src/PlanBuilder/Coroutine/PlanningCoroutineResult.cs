@@ -3,7 +3,7 @@
     /// <summary>
     /// Determines the result of an iteration of the planner.
     /// </summary>
-    public enum PlanningCoroutineResult
+    internal enum PlanningCoroutineResult
     {
         /// <summary>
         /// Planification can continue.

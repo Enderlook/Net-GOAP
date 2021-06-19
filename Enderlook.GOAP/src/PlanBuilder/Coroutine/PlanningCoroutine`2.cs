@@ -9,11 +9,9 @@
     {
         private protected const byte Initialize = 0;
         private protected const byte Continue = 1;
-        private protected const byte ToCancel = 2;
-        private protected const byte ToFinalize = 3;
-        private protected const byte Finalized = 4;
-        private protected const byte Cancelled = 5;
-        private protected const byte Disposed = 6;
+        private protected const byte Finalized = 3;
+        private protected const byte Cancelled = 4;
+        private protected const byte Disposed = 5;
 
         private protected byte state;
 

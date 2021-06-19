@@ -13,7 +13,7 @@ namespace Enderlook.GOAP
         /// <summary>
         /// Continues execution of coroutine.
         /// </summary>
-        /// <returns>State of the planification.</returns>
-        public abstract PlanningCoroutineResult MoveNext();
+        /// <returns>If <see langword="false"/>, the planning finalized, or was cancelled.</returns>
+        public abstract bool MoveNext();
     }
 }
