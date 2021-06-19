@@ -44,7 +44,6 @@ namespace Enderlook.GOAP
         where TWorldState : IWorldState<TWorldState>
         where TGoal : IGoal<TWorldState>
         where TAction : IAction<TWorldState, TGoal>
-        where TGoals : IEnumerable<TGoal>
         where TActions : IEnumerable<TAction>
     {{
         private TWorldState worldState;
@@ -112,41 +111,34 @@ namespace Enderlook.GOAP
             where TAgent : IAgent<TWorldState, TGoal, TAction>
             where TWatchdog : IWatchdog
         {{
-            if (typeof(TGoals).IsValueType)
+            Debug.Assert(typeof(TGoals) == typeof(Planning.SingleGoal<TGoal>) || typeof(TGoals) == typeof(Planning.CheapestGoal<TGoal>));
+
+            switch (goals)
             {{
-                if (typeof(IList<TGoal>).IsAssignableFrom(typeof(TGoals)))
-                {{
-                    int count = ((IList<TGoal>)goals).Count;
-                    for (int i = 0; i < count; i++)
-                        builder.AddGoal(((IList<TGoal>)goals)[i]);
-                }}
-                else
-                {{
-                    foreach (TGoal goal in goals)
-                        builder.AddGoal(goal);
-                }}
-            }}
-            else
-            {{
-                switch (goals)
-                {{
-                    case TGoal[] array:
-                        for (int i = 0; i < array.Length; i++)
-                            builder.AddGoal(array[i]);
-                        break;
-                    case List<TGoal> list:
-                        for (int i = 0; i < list.Count; i++)
-                            builder.AddGoal(list[i]);
-                        break;
-                    case IList<TGoal> ilist:
-                        for (int i = 0; i < ilist.Count; i++)
-                            builder.AddGoal(ilist[i]);
-                        break;
-                    default:
-                        foreach (TGoal goal in goals)
-                            builder.AddGoal(goal);
-                        break;
-                }}
+                case Planning.SingleGoal<TGoal> singleGoal:
+                    builder.AddGoal(singleGoal.Goal);
+                    break;
+                case Planning.CheapestGoal<TGoal> cheapestGoal:
+                    switch (cheapestGoal.Goals)
+                    {{
+                        case TGoal[] array:
+                            for (int i = 0; i < array.Length; i++)
+                                builder.AddGoal(array[i]);
+                            break;
+                        case List<TGoal> list:
+                            for (int i = 0; i < list.Count; i++)
+                                builder.AddGoal(list[i]);
+                            break;
+                        case IList<TGoal> ilist:
+                            for (int i = 0; i < ilist.Count; i++)
+                                builder.AddGoal(ilist[i]);
+                            break;
+                        default:
+                            foreach (TGoal goal in cheapestGoal.Goals)
+                                builder.AddGoal(goal);
+                            break;
+                    }}
+                break;
             }}
         }}
 
