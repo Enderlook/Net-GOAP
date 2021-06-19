@@ -1,4 +1,6 @@
-﻿namespace Enderlook.GOAP
+﻿using Enderlook.GOAP.Watchdogs;
+
+namespace Enderlook.GOAP.Utilities
 {
     /// <summary>
     /// Describes an agent.

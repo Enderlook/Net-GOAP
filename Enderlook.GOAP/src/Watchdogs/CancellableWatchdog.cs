@@ -1,7 +1,7 @@
 ﻿using System.Runtime.CompilerServices;
 using System.Threading;
 
-namespace Enderlook.GOAP
+namespace Enderlook.GOAP.Watchdogs
 {
     /// <summary>
     /// Represent a watchdog that wrap a <see cref="CancellationToken"/>.

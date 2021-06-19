@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
 
-namespace Enderlook.GOAP
+namespace Enderlook.GOAP.Utilities
 {
     /// <summary>
     /// An static thread-safe pool.

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
 
-namespace Enderlook.GOAP
+namespace Enderlook.GOAP.Watchdogs
 {
     /// <summary>
     /// Cancelates a GOAP operation as soon the computation time reaches an specified value.
@@ -11,16 +11,17 @@ namespace Enderlook.GOAP
         private readonly int upTo;
 
         /// <summary>
-        /// Creates a watchdog that cancelates as soon the computation time of GOAP reaches the specified <paramref name="maximumMiliseconds"/>.
+        /// Creates a watchdog that cancelates as soon the computation time of GOAP reaches the specified <paramref name="maximumMilliseconds"/>.
         /// </summary>
-        /// <param name="maximumMiliseconds">Maximum miliseconds spent computating.</param>
+        /// <param name="maximumMilliseconds">Maximum miliseconds spent computating.</param>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="maximumMilliseconds"/> is 0 or negative.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public TimeOutWatchdog(int maximumMiliseconds)
+        public TimeOutWatchdog(int maximumMilliseconds)
         {
-            if (maximumMiliseconds <= 0)
+            if (maximumMilliseconds <= 0)
                 ThrowMustBeGreaterThanZero();
 
-            upTo = DateTime.Now.AddMilliseconds(maximumMiliseconds).Millisecond;
+            upTo = DateTime.Now.AddMilliseconds(maximumMilliseconds).Millisecond;
 
             static void ThrowMustBeGreaterThanZero() => throw new ArgumentException("maximumMiliseconds", "Must be greater than 0.");
         }

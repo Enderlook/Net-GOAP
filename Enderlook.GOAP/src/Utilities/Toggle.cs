@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
-namespace Enderlook.GOAP
+namespace Enderlook.GOAP.Utilities
 {
     /// <summary>
     /// Type used to allow enable features using generics.

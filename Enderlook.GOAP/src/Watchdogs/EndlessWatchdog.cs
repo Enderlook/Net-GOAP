@@ -1,6 +1,6 @@
 ﻿using System.Runtime.CompilerServices;
 
-namespace Enderlook.GOAP
+namespace Enderlook.GOAP.Watchdogs
 {
     /// <summary>
     /// Don't suspend nor cancelates the computation of a GOAP.

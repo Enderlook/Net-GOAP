@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 
@@ -8,20 +9,20 @@ namespace Enderlook.GOAP.Planning
     /// This type is an implementation detail an shall never be used in parameters, fields, variables or return types.
     /// </summary>
     /// <typeparam name="TGoal">Type of goal.</typeparam>
-    public readonly struct SingleGoal<TGoal>
+    public readonly struct CheapestGoal<TGoal>
     {
-        internal readonly TGoal Goal;
+        internal readonly IEnumerable<TGoal> Goals;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal SingleGoal(TGoal goal)
+        internal CheapestGoal(IEnumerable<TGoal> goals)
         {
-            if (goal is null)
-                ThrowGoalNullException();
+            if (goals is null)
+                ThrowGoalsNullException();
 
-            Goal = goal;
+            Goals = goals;
 
             [DoesNotReturn]
-            static void ThrowGoalNullException() => throw new ArgumentNullException(nameof(goal));
+            static void ThrowGoalsNullException() => throw new ArgumentNullException(nameof(goals));
         }
     }
 }

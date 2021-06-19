@@ -1,6 +1,8 @@
 ﻿using Enderlook.Collections.LowLevel;
+using Enderlook.GOAP.Planning;
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
@@ -76,7 +78,7 @@ namespace Enderlook.GOAP
         /// <summary>
         /// Get the goal index that the plan will archive.
         /// </summary>
-        /// <returns>Goal to archive. The index represent the element from <see cref="IAgent{TWorldState, TGoal, TAction}.GetGoals"/>.</returns>
+        /// <returns>Goal to archive. The index represent the element from passed enumeration.</returns>
         /// <exception cref="InvalidOperationException">Thrown when there is no plan.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int GetGoalIndex()
@@ -106,7 +108,7 @@ namespace Enderlook.GOAP
         /// Get the index of the action to execute at index <paramref name="step"/>.
         /// </summary>
         /// <param name="step">Number of action from plan.</param>
-        /// <returns>Index of the action to execute. The index correspond to elements from <see cref="IAgent{TWorldState, TGoal, TAction}.GetActions"/>.</returns>
+        /// <returns>Index of the action to execute. The index correspond to elements from the passed enumeration.</returns>
         /// <exception cref="InvalidOperationException">Thrown when there is no plan.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="step"/> is negative, equal or higher than <see cref="GetActionsCount"/>.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -34,6 +34,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
+using Enderlook.GOAP.Utilities;
+using Enderlook.GOAP.Watchdogs;
+
 namespace Enderlook.GOAP
 {{
     internal struct {name}<TWorldState, TGoal, TAction, TGoals, TActions{(special ? ", THelper" : "")}> :

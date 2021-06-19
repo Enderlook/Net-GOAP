@@ -1,4 +1,4 @@
-﻿namespace Enderlook.GOAP
+﻿namespace Enderlook.GOAP.Watchdogs
 {
     /// <summary>
     /// How planning must continue.

@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-namespace Enderlook.GOAP
+namespace Enderlook.GOAP.Utilities
 {
     internal static class Utils
     {

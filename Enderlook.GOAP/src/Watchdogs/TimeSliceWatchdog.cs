@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
 
-namespace Enderlook.GOAP
+namespace Enderlook.GOAP.Watchdogs
 {
     /// <summary>
     /// Suspends a GOAP operation as soon the computation time reaches an specified value.
