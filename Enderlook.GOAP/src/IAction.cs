@@ -19,7 +19,7 @@
 
         /// <summary>
         /// Applies the effects of this action to a memory.<br/>
-        /// Note that this method must not consume the required goal.
+        /// Note that this method must not consume the required preconditions, if any.
         /// </summary>
         /// <param name="memory">World state where effects are being applied.</param>
         void ApplyEffect(TWorldState memory);
