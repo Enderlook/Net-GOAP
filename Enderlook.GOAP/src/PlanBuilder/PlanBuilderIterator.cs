@@ -240,17 +240,15 @@ namespace Enderlook.GOAP
                             if (Toggle.IsOn<TLog>())
                                 builder.AppendToLog(". Satisfied.\n   ");
 
-                            float newCost = currentCost + action.GetCost();
-                            if (action.TryGetRequiredGoal(out TGoal requiredGoal))
+                            if (action.GetCostAndRequiredGoal(out TGoal requiredGoal, out float actionCost))
                             {
                                 int newGoals = currentGoal.WithReplacement(builder, requiredGoal);
-                                builder.Enqueue<TLog>(id, actionIndex, newCost, newGoals, newMemory);
+                                builder.Enqueue<TLog>(id, actionIndex, currentCost + actionCost, newGoals, newMemory);
                             }
                             else if (currentGoal.WithPop(out int newGoals))
-                                builder.Enqueue<TLog>(id, actionIndex, newCost, newGoals, newMemory);
+                                builder.Enqueue<TLog>(id, actionIndex, currentCost + actionCost, newGoals, newMemory);
                             else
-                                FoundValidPath(ref this, id, newCost, actionIndex, newMemory);
-
+                                FoundValidPath(ref this, id, currentCost + actionCost, actionIndex, newMemory);
                             break;
                         }
                         case SatisfactionResult.Progressed:
@@ -258,14 +256,13 @@ namespace Enderlook.GOAP
                             if (Toggle.IsOn<TLog>())
                                 builder.AppendToLog(". Progressed.\n   ");
 
-                            float newCost = currentCost + action.GetCost();
-                            if (action.TryGetRequiredGoal(out TGoal requiredGoal))
+                            if (action.GetCostAndRequiredGoal(out TGoal requiredGoal, out float actionCost))
                             {
                                 int newGoals = PlanBuilderState<TWorldState, TGoal, TAction>.GoalNode.WithPush(builder, currentGoalIndex, requiredGoal);
-                                builder.Enqueue<TLog>(id, actionIndex, newCost, newGoals, newMemory);
+                                builder.Enqueue<TLog>(id, actionIndex, currentCost + actionCost, newGoals, newMemory);
                             }
                             else
-                                builder.Enqueue<TLog>(id, actionIndex, newCost, currentGoalIndex, newMemory);
+                                builder.Enqueue<TLog>(id, actionIndex, currentCost + actionCost, currentGoalIndex, newMemory);
                             break;
                         }
                         case SatisfactionResult.NotProgressed:

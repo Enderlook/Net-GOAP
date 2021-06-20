@@ -10,17 +10,12 @@
         where TGoal : IGoal<TWorldState>
     {
         /// <summary>
-        /// Get the preconditions required to perform this action.
+        /// Get the cost and preconditions required to perform this action.
         /// </summary>
         /// <param name="goal">Preconditions required to perform this action.</param>
-        /// <returns>Whenever this actions requires any precondition.</returns>
-        bool TryGetRequiredGoal(out TGoal goal);
-
-        /// <summary>
-        /// Get the cost of running this action.
-        /// </summary>
-        /// <returns>Cost of running this action.</returns>
-        float GetCost();
+        /// <param name="cost">Cost of running this action.</param>
+        /// <returns>If <see langword="false"/>, the <paramref name="goal"/> precondition is ignored.</returns>
+        bool GetCostAndRequiredGoal(out TGoal goal, out float cost);
 
         /// <summary>
         /// Applies the effects of this action to a memory.<br/>
