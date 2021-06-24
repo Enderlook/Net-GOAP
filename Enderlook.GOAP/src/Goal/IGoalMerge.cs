@@ -2,7 +2,7 @@
 {
     /// <summary>
     /// Interface that allows merging goals to reduce memory consumption.<br/>
-    /// This interface can be implemented by a type which also implements <see cref="IAgent{TMemory, TGoal, TAction}"/>.
+    /// This interface can be implemented by a helper type.
     /// </summary>
     /// <typeparam name="TGoal">Type of goal.</typeparam>
     public interface IGoalMerge<TGoal>

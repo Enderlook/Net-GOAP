@@ -18,17 +18,20 @@ namespace Enderlook.GOAP
                 {
                     foreach (bool mergeGoal in boolean)
                     {
-                        (string name, string file) = GetFile(poolGoal, poolWorld, mergeGoal);
-                        context.AddSource(name, SourceText.From(file, Encoding.UTF8));
+                        foreach (bool poolActionHandle in boolean)
+                        {
+                            (string name, string file) = GetFile(poolGoal, poolWorld, mergeGoal, poolActionHandle);
+                            context.AddSource(name, SourceText.From(file, Encoding.UTF8));
+                        }
                     }
                 }
             }
         }
 
-        private (string name, string file) GetFile(bool poolGoal, bool poolWorld, bool mergeGoal)
+        private (string name, string file) GetFile(bool poolGoal, bool poolWorld, bool mergeGoal, bool poolActionHandle)
         {
-            bool special = poolGoal || poolWorld || mergeGoal;
-            string name = $"AgentWrapper{(poolGoal ? "PoolGoal" : "")}{(poolWorld ? "PoolWorld" : "")}{(mergeGoal ? "MergeGoal" : "")}";
+            bool special = poolGoal || poolWorld || mergeGoal || poolActionHandle;
+            string name = $"AgentWrapper{(poolGoal ? "PoolGoal" : "")}{(poolWorld ? "PoolWorld" : "")}{(mergeGoal ? "MergeGoal" : "")}{(poolActionHandle ? "PoolActionHandle" : "")}";
             return (name, $@"
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -39,14 +42,15 @@ using Enderlook.GOAP.Watchdogs;
 
 namespace Enderlook.GOAP
 {{
-    internal struct {name}<TWorldState, TGoal, TAction, TGoals, TActions{(special ? ", THelper" : "")}> :
-        IAgent<TWorldState, TGoal, TAction>
+    internal struct {name}<TWorldState, TGoal, TAction, TActionHandle, TGoals, TActions{(special ? ", THelper" : "")}> :
+        IAgent<TWorldState, TGoal, TAction, TActionHandle>
         {(poolGoal ? ", IGoalPool<TGoal>" : "")}
         {(poolWorld ? ", IWorldStatePool<TWorldState>" : "")}
         {(mergeGoal ? ", IGoalMerge<TGoal>" : "")}
+        {(poolActionHandle ? ", IActionHandlePool<TActionHandle>" : "")}
         where TWorldState : IWorldState<TWorldState>
         where TGoal : IGoal<TWorldState>
-        where TAction : IAction<TWorldState, TGoal>
+        where TAction : IAction<TWorldState, TGoal, TActionHandle>
         where TActions : IEnumerable<TAction>
     {{
         private TWorldState worldState;
@@ -63,12 +67,13 @@ namespace Enderlook.GOAP
             {(poolGoal ? "Debug.Assert(typeof(IGoalPool<TGoal>).IsAssignableFrom(helper.GetType()));" : "")}
             {(poolWorld ? "Debug.Assert(typeof(IWorldStatePool<TWorldState>).IsAssignableFrom(helper.GetType()));" : "")}
             {(mergeGoal ? "Debug.Assert(typeof(IGoalMerge<TGoal>).IsAssignableFrom(helper.GetType()));" : "")}
+            {(poolActionHandle ? "Debug.Assert(typeof(IActionHandlePool<TActionHandle>).IsAssignableFrom(helper.GetType()));" : "")}
             {(special ? "this.helper = helper;" : "")}
         }}
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void SetActions<TAgent, TWatchdog, TLog>(ref PlanBuilderIterator<TAgent, TWorldState, TGoal, TAction, TWatchdog, TLog> builder)
-            where TAgent : IAgent<TWorldState, TGoal, TAction>
+        public void SetActions<TAgent, TWatchdog, TLog>(ref PlanBuilderIterator<TAgent, TWorldState, TGoal, TAction, TActionHandle, TWatchdog, TLog> builder)
+            where TAgent : IAgent<TWorldState, TGoal, TAction, TActionHandle>
             where TWatchdog : IWatchdog
         {{
             if (typeof(TActions).IsValueType)
@@ -110,8 +115,8 @@ namespace Enderlook.GOAP
         }}
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void SetGoals<TAgent, TWatchdog, TLog>(ref PlanBuilderIterator<TAgent, TWorldState, TGoal, TAction, TWatchdog, TLog> builder)
-            where TAgent : IAgent<TWorldState, TGoal, TAction>
+        public void SetGoals<TAgent, TWatchdog, TLog>(ref PlanBuilderIterator<TAgent, TWorldState, TGoal, TAction, TActionHandle, TWatchdog, TLog> builder)
+            where TAgent : IAgent<TWorldState, TGoal, TAction, TActionHandle>
             where TWatchdog : IWatchdog
         {{
             Debug.Assert(typeof(TGoals) == typeof(Planning.SingleGoal<TGoal>) || typeof(TGoals) == typeof(Planning.CheapestGoal<TGoal>));
@@ -189,6 +194,17 @@ namespace Enderlook.GOAP
                 Unsafe.As<IWorldStatePool<TWorldState>>(helper).Return(value);
         }
 " : "" )}
+
+{(poolActionHandle ? @"
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Return(TActionHandle value)
+        {
+            if (typeof(THelper).IsValueType)
+                ((IActionHandlePool<TActionHandle>)helper).Return(value);
+            else
+                Unsafe.As<IActionHandlePool<TActionHandle>>(helper).Return(value);
+        }
+" : "")}
     }}
 }}
 ");

@@ -6,16 +6,16 @@ using System.Diagnostics;
 
 namespace Enderlook.GOAP
 {
-    internal class PlanningCoroutine<TAgent, TWorldState, TGoal, TAction, TWatchdog, TLog> : PlanningCoroutine<TGoal, TAction>
-        where TAgent : IAgent<TWorldState, TGoal, TAction>
+    internal class PlanningCoroutine<TAgent, TWorldState, TGoal, TAction, TActionHandle, TWatchdog, TLog> : PlanningCoroutine<TGoal, TAction>
+        where TAgent : IAgent<TWorldState, TGoal, TAction, TActionHandle>
         where TWorldState : IWorldState<TWorldState>
         where TGoal : IGoal<TWorldState>
-        where TAction : IAction<TWorldState, TGoal>
+        where TAction : IAction<TWorldState, TGoal, TActionHandle>
         where TWatchdog : IWatchdog
     {
-        private PlanBuilderIterator<TAgent, TWorldState, TGoal, TAction, TWatchdog, TLog> iterator;
+        private PlanBuilderIterator<TAgent, TWorldState, TGoal, TAction, TActionHandle, TWatchdog, TLog> iterator;
 
-        public PlanningCoroutine(PlanBuilderIterator<TAgent, TWorldState, TGoal, TAction, TWatchdog, TLog> iterator)
+        public PlanningCoroutine(PlanBuilderIterator<TAgent, TWorldState, TGoal, TAction, TActionHandle, TWatchdog, TLog> iterator)
         {
             this.iterator = iterator;
             state = Initialize;

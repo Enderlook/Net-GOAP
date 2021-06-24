@@ -5,23 +5,28 @@
     /// </summary>
     /// <typeparam name="TWorldState">Type of world state.</typeparam>
     /// <typeparam name="TGoal">Type of goal.</typeparam>
-    public interface IAction<TWorldState, TGoal>
+    /// <typeparam name="TActionHandle">Type of action handle.</typeparam>
+    public interface IAction<TWorldState, TGoal, TActionHandle>
         where TWorldState : IWorldState<TWorldState>
         where TGoal : IGoal<TWorldState>
     {
         /// <summary>
         /// Get the cost and preconditions required to perform this action.
         /// </summary>
+        /// <param name="worldState">State of the world.</param>
+        /// <param name="handle">Handle from <see cref="ApplyEffect(TWorldState, out TActionHandle)"/>.</param>
         /// <param name="goal">Preconditions required to perform this action.</param>
         /// <param name="cost">Cost of running this action.</param>
-        /// <returns>If <see langword="false"/>, the <paramref name="goal"/> precondition is ignored.</returns>
-        bool GetCostAndRequiredGoal(out TGoal goal, out float cost);
+        /// <returns>Determines how the action can be used.</returns>
+        ActionUsageResult GetCostAndRequiredGoal(TWorldState worldState, TActionHandle handle, out TGoal goal, out float cost);
 
         /// <summary>
-        /// Applies the effects of this action to a memory.<br/>
-        /// Note that this method must not consume the required preconditions, if any.
+        /// Applies the effects of this action to a world.<br/>
+        /// Note that this method must not consume the required preconditions, if any.<br/>
+        /// Note that if the world state doesn't allow the execution of this action, it must fail silently.
         /// </summary>
-        /// <param name="memory">World state where effects are being applied.</param>
-        void ApplyEffect(TWorldState memory);
+        /// <param name="worldState">World state where effects are being applied.</param>
+        /// <param name="handle">Opaque handle that will be passed to <see cref="GetCostAndRequiredGoal(TWorldState, TActionHandle, out TGoal, out float)"/>.</param>
+        void ApplyEffect(TWorldState worldState, out TActionHandle handle);
     }
 }

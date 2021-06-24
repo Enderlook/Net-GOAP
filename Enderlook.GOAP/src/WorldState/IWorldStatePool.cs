@@ -2,7 +2,7 @@
 {
     /// <summary>
     /// Interface that allows pooling of world states.<br/>
-    /// This interface can be implemented by a type which also implements <see cref="IAgent{TMemory, TGoal, TAction}"/>.
+    /// This interface can be implemented by a helper type.
     /// </summary>
     /// <typeparam name="TWorld">Type of world state.</typeparam>
     public interface IWorldStatePool<TWorld>

@@ -13,10 +13,10 @@ namespace Enderlook.GOAP.Planning
     /// This type is an implementation detail an shall never be used in parameters, fields, variables or return types.<br/>
     /// It should only be used in chaining calls.
     /// </summary>
-    public readonly ref struct PlanBuilderGoal<TWorldState, TGoal, TGoals, TAction, TActions>
+    public readonly ref struct PlanBuilderGoal<TWorldState, TGoal, TGoals, TAction, TActionHandle, TActions>
         where TWorldState : IWorldState<TWorldState>
         where TGoal : IGoal<TWorldState>
-        where TAction : IAction<TWorldState, TGoal>
+        where TAction : IAction<TWorldState, TGoal, TActionHandle>
         where TActions : IEnumerable<TAction>
     {
         private readonly Plan<TGoal, TAction> plan;
@@ -52,7 +52,7 @@ namespace Enderlook.GOAP.Planning
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="helper"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="helper"/> doesn't implement any of  <see cref="IGoalMerge{TGoal}"/>, <see cref="IGoalPool{TGoal}"/>, <see cref="IWorldStatePool{TWorld}"/>.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public PlanBuilderHelper<TWorldState, TGoal, TGoals, TAction, TActions, EndlessWatchdog, THelper> WithHelper<THelper>(THelper helper)
+        public PlanBuilderHelper<TWorldState, TGoal, TGoals, TAction, TActionHandle, TActions, EndlessWatchdog, THelper> WithHelper<THelper>(THelper helper)
         {
             if (plan is null)
                 Planner.ThrowInstanceIsDefault();
@@ -71,7 +71,7 @@ namespace Enderlook.GOAP.Planning
         /// <exception cref="ArgumentException">Thrown when instance is default.</exception>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="watchdog"/> is <see langword="null"/>.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public PlanBuilderWatchdog<TWorldState, TGoal, TGoals, TAction, TActions, TWatchdog> WithWatchdog<TWatchdog>(TWatchdog watchdog)
+        public PlanBuilderWatchdog<TWorldState, TGoal, TGoals, TAction, TActionHandle, TActions, TWatchdog> WithWatchdog<TWatchdog>(TWatchdog watchdog)
             where TWatchdog : IWatchdog
         {
             if (plan is null)
@@ -89,7 +89,7 @@ namespace Enderlook.GOAP.Planning
         /// Shall only be used for method chaining.</returns>
         /// <exception cref="ArgumentException">Thrown when instance is default.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public PlanBuilderWatchdog<TWorldState, TGoal, TGoals, TAction, TActions, CancellableWatchdog> WithCancellationToken(CancellationToken token)
+        public PlanBuilderWatchdog<TWorldState, TGoal, TGoals, TAction, TActionHandle, TActions, CancellableWatchdog> WithCancellationToken(CancellationToken token)
             => WithWatchdog(new CancellableWatchdog(token));
 
         /// <summary>
@@ -101,7 +101,7 @@ namespace Enderlook.GOAP.Planning
         /// <exception cref="ArgumentException">Thrown when instance is default.</exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="maximumCost"/> is 0 or negative.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public PlanBuilderWatchdog<TWorldState, TGoal, TGoals, TAction, TActions, CostWatchdog> WithCostLimit(float maximumCost)
+        public PlanBuilderWatchdog<TWorldState, TGoal, TGoals, TAction, TActionHandle, TActions, CostWatchdog> WithCostLimit(float maximumCost)
             => WithWatchdog(new CostWatchdog(maximumCost));
 
         /// <summary>
@@ -113,13 +113,13 @@ namespace Enderlook.GOAP.Planning
         /// <exception cref="ArgumentException">Thrown when instance is default.</exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="maximumMilliseconds"/> is 0 or negative.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public PlanBuilderWatchdog<TWorldState, TGoal, TGoals, TAction, TActions, CostWatchdog> WithTimeout(float maximumMilliseconds)
+        public PlanBuilderWatchdog<TWorldState, TGoal, TGoals, TAction, TActionHandle, TActions, CostWatchdog> WithTimeout(float maximumMilliseconds)
             => WithWatchdog(new CostWatchdog(maximumMilliseconds));
 
         /// <summary>
         /// Executes the planification synchronously.
         /// </summary>
-        /// <returns>Instance passed on <see cref="PlanExtensions.Plan{TWorldState, TGoal, TAction, TActions}(Plan{TGoal, TAction}, TWorldState, TActions, Action{string}?)"/> method.</returns>
+        /// <returns>Instance passed on <see cref="PlanExtensions.Plan{TWorldState, TGoal, TAction, TActionHandle, TActions}(Plan{TGoal, TAction}, TWorldState, TActions, Action{string}?)"/> method.</returns>
         /// <exception cref="ArgumentException">Thrown when instance is default.</exception>
         /// <remarks>If the planifiaction has a watchdog, all <see cref="WatchdogResult.Suspend"/> will be traduced as <see cref="Thread.Yield()"/>.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -129,7 +129,7 @@ namespace Enderlook.GOAP.Planning
                 Planner.ThrowInstanceIsDefault();
             DebugAssert();
 
-            Planner.RunAndDispose<AgentWrapper<TWorldState, TGoal, TAction, TGoals, TActions>, TWorldState, TGoal, TAction, EndlessWatchdog>(
+            Planner.RunAndDispose<AgentWrapper<TWorldState, TGoal, TAction, TActionHandle, TGoals, TActions>, TWorldState, TGoal, TAction, TActionHandle, EndlessWatchdog>(
                 new (worldState, goals, actions), plan, new(), log);
             return plan;
         }
@@ -137,7 +137,7 @@ namespace Enderlook.GOAP.Planning
         /// <summary>
         /// Executes the planification asynchronously.
         /// </summary>
-        /// <returns>Instance passed on <see cref="PlanExtensions.Plan{TWorldState, TGoal, TAction, TActions}(Plan{TGoal, TAction}, TWorldState, TActions, Action{string}?)"/> method.</returns>
+        /// <returns>Instance passed on <see cref="PlanExtensions.Plan{TWorldState, TGoal, TAction, TActionHandle, TActions}(Plan{TGoal, TAction}, TWorldState, TActions, Action{string}?)"/> method.</returns>
         /// <exception cref="ArgumentException">Thrown when instance is default.</exception>
         /// <remarks>If the planifiaction has a watchdog, all <see cref="WatchdogResult.Suspend"/> will be traduced as <see cref="Task.Yield()"/>.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -147,14 +147,14 @@ namespace Enderlook.GOAP.Planning
                 Planner.ThrowInstanceIsDefault();
             DebugAssert();
 
-            return Planner.RunAndDisposeAsync<AgentWrapper<TWorldState, TGoal, TAction, TGoals, TActions>, TWorldState, TGoal, TAction, EndlessWatchdog>(
+            return Planner.RunAndDisposeAsync<AgentWrapper<TWorldState, TGoal, TAction, TActionHandle, TGoals, TActions>, TWorldState, TGoal, TAction, TActionHandle, EndlessWatchdog>(
                 new(worldState, goals, actions), plan, new(), log);
         }
 
         /// <summary>
         /// Executes the planification asynchronously.
         /// </summary>
-        /// <returns>Instance passed on <see cref="PlanExtensions.Plan{TWorldState, TGoal, TAction, TActions}(Plan{TGoal, TAction}, TWorldState, TActions, Action{string}?)"/> method.</returns>
+        /// <returns>Instance passed on <see cref="PlanExtensions.Plan{TWorldState, TGoal, TAction, TActionHandle, TActions}(Plan{TGoal, TAction}, TWorldState, TActions, Action{string}?)"/> method.</returns>
         /// <exception cref="ArgumentException">Thrown when instance is default.</exception>
         /// <remarks>If the planifiaction has a watchdog, all <see cref="WatchdogResult.Suspend"/> will be traduced as an enumerator yield.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -164,7 +164,7 @@ namespace Enderlook.GOAP.Planning
                 Planner.ThrowInstanceIsDefault();
             DebugAssert();
 
-            return Planner.RunAndDisposeCoroutine<AgentWrapper<TWorldState, TGoal, TAction, TGoals, TActions>, TWorldState, TGoal, TAction, EndlessWatchdog>(
+            return Planner.RunAndDisposeCoroutine<AgentWrapper<TWorldState, TGoal, TAction, TActionHandle, TGoals, TActions>, TWorldState, TGoal, TAction, TActionHandle, EndlessWatchdog>(
                 new(worldState, goals, actions), plan, new(), log);
         }
 

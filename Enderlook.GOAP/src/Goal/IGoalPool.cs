@@ -2,7 +2,7 @@
 {
     /// <summary>
     /// Interface that allows pooling of goals.<br/>
-    /// This interface can be implemented by a type which also implements <see cref="IAgent{TMemory, TGoal, TAction}"/>.
+    /// This interface can be implemented by a helper type.
     /// </summary>
     /// <typeparam name="TGoal">Type of goal.</typeparam>
     public interface IGoalPool<TGoal>
