@@ -183,10 +183,6 @@ namespace Enderlook.GOAP
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal int PlanCountInternal()
-        {
-            Debug.Assert(mode == PlanMode.InProgress);
-            return plan.Count;
-        }
+        internal int PlanCountInternal() => plan.Count;
     }
 }
