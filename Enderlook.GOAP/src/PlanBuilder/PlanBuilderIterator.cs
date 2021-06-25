@@ -216,12 +216,19 @@ namespace Enderlook.GOAP
                         builder.AppendToLog(" -> ");
                     }
 
+                    if (!action.CheckProceduralPreconditions(currentMemory, out TActionHandle? handle))
+                    {
+                        if (Toggle.IsOn<TLog>())
+                            builder.AppendAndLog("Doesn't satisfy procedural preconditions.");
+                        continue;
+                    }
+
                     TWorldState newMemory;
                     if (typeof(IWorldStatePool<TWorldState>).IsAssignableFrom(typeof(TAgent)))
                         newMemory = ((IWorldStatePool<TWorldState>)agent).Clone(currentMemory);
                     else
                         newMemory = currentMemory.Clone();
-                    action.ApplyEffect(newMemory, out TActionHandle handle);
+                    action.ApplyEffect(newMemory, handle);
 
                     if (Toggle.IsOn<TLog>())
                         builder.AppendToLog(newMemory.ToString() ?? "<Null>");
@@ -241,33 +248,17 @@ namespace Enderlook.GOAP
                             if (Toggle.IsOn<TLog>())
                                 builder.AppendToLog(". Satisfied.\n   ");
 
-                            switch (action.GetCostAndRequiredGoal(newMemory, handle, out TGoal requiredGoal, out float actionCost))
+                            if (action.GetCostAndRequiredGoal(handle, out float actionCost, out TGoal requiredGoal))
                             {
-                                case ActionUsageResult.AllowedAndHasGoal:
-                                {
-                                    int newGoals = currentGoal.WithReplacement(builder, requiredGoal);
+                                int newGoals = currentGoal.WithReplacement(builder, requiredGoal);
+                                ProcessGoalAndCheckForChainedSatisfaction(ref this, id, currentCost, actionIndex, ref newMemory, currentGoal, actionCost, ref newGoals);
+                            }
+                            else
+                            {
+                                if (currentGoal.WithPop(out int newGoals))
                                     ProcessGoalAndCheckForChainedSatisfaction(ref this, id, currentCost, actionIndex, ref newMemory, currentGoal, actionCost, ref newGoals);
-                                    break;
-                                }
-                                case ActionUsageResult.Allowed:
-                                {
-                                    if (currentGoal.WithPop(out int newGoals))
-                                        ProcessGoalAndCheckForChainedSatisfaction(ref this, id, currentCost, actionIndex, ref newMemory, currentGoal, actionCost, ref newGoals);
-                                    else
-                                        FoundValidPath(ref this, id, currentCost + actionCost, actionIndex, newMemory);
-                                    break;
-                                }
-                                case ActionUsageResult.NotAllowed:
-                                {
-                                    if (Toggle.IsOn<TLog>())
-                                        builder.AppendAndLog("Action is not allowed.");
-                                    break;
-                                }
-                                default:
-                                {
-                                    ThrowInvalidActionUsageException();
-                                    break;
-                                }
+                                else
+                                    FoundValidPath(ref this, id, currentCost + actionCost, actionIndex, newMemory);
                             }
                             break;
                         }
@@ -276,31 +267,13 @@ namespace Enderlook.GOAP
                             if (Toggle.IsOn<TLog>())
                                 builder.AppendToLog(". Progressed.\n   ");
 
-                            switch (action.GetCostAndRequiredGoal(newMemory, handle, out TGoal requiredGoal, out float actionCost))
+                            if (action.GetCostAndRequiredGoal(handle, out float actionCost, out TGoal requiredGoal))
                             {
-                                case ActionUsageResult.AllowedAndHasGoal:
-                                {
-                                    int newGoals = PlanBuilderState<TWorldState, TGoal, TAction>.GoalNode.WithPush(builder, currentGoalIndex, requiredGoal);
-                                    builder.Enqueue<TLog>(id, actionIndex, currentCost + actionCost, newGoals, newMemory);
-                                    break;
-                                }
-                                case ActionUsageResult.Allowed:
-                                {
-                                    builder.Enqueue<TLog>(id, actionIndex, currentCost + actionCost, currentGoalIndex, newMemory);
-                                    break;
-                                }
-                                case ActionUsageResult.NotAllowed:
-                                {
-                                    if (Toggle.IsOn<TLog>())
-                                        builder.AppendAndLog("Action is not allowed.");
-                                    break;
-                                }
-                                default:
-                                {
-                                    ThrowInvalidActionUsageException();
-                                    break;
-                                }
+                                int newGoals = PlanBuilderState<TWorldState, TGoal, TAction>.GoalNode.WithPush(builder, currentGoalIndex, requiredGoal);
+                                builder.Enqueue<TLog>(id, actionIndex, currentCost + actionCost, newGoals, newMemory);
                             }
+                            else
+                                builder.Enqueue<TLog>(id, actionIndex, currentCost + actionCost, currentGoalIndex, newMemory);
                             break;
                         }
                         case SatisfactionResult.NotProgressed:
@@ -342,9 +315,6 @@ namespace Enderlook.GOAP
 
             [DoesNotReturn]
             static void ThrowInvalidSatisfactionResultException() => throw new InvalidOperationException($"Returned value is not a valid value of {nameof(SatisfactionResult)}.");
-
-            [DoesNotReturn]
-            static void ThrowInvalidActionUsageException() => throw new InvalidOperationException($"Returned value is not a valid value of {nameof(ActionUsageResult)}.");
 
             [DoesNotReturn]
             static void ThrowInvalidWatchdogResultException() => throw new InvalidOperationException($"Returned value is not a valid value of {nameof(WatchdogResult)}.");

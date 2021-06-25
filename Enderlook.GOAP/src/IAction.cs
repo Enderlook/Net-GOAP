@@ -1,4 +1,6 @@
-﻿namespace Enderlook.GOAP
+﻿using System.Diagnostics.CodeAnalysis;
+
+namespace Enderlook.GOAP
 {
     /// <summary>
     /// Describes an action.
@@ -11,22 +13,28 @@
         where TGoal : IGoal<TWorldState>
     {
         /// <summary>
-        /// Get the cost and preconditions required to perform this action.
+        /// Check if this action meets procedural preconditions.<br/>
+        /// Not confuse with the preconditions of <see cref="GetCostAndRequiredGoal(TActionHandle, out float, out TGoal)"/>, this ones are not actually tied to the world state.<br/>
+        /// If procedural preconditions are meet, generates an action handle which will be passed to <see cref="GetCostAndRequiredGoal(TActionHandle, out float, out TGoal)"/> and <see cref="ApplyEffect(TWorldState, TActionHandle)"/>.
         /// </summary>
-        /// <param name="worldState">State of the world.</param>
-        /// <param name="handle">Handle from <see cref="ApplyEffect(TWorldState, out TActionHandle)"/>.</param>
-        /// <param name="goal">Preconditions required to perform this action.</param>
-        /// <param name="cost">Cost of running this action.</param>
-        /// <returns>Determines how the action can be used.</returns>
-        ActionUsageResult GetCostAndRequiredGoal(TWorldState worldState, TActionHandle handle, out TGoal goal, out float cost);
+        /// <returns><see langword="true"/> if procedural preconditions are satisfied.</returns>
+        bool CheckProceduralPreconditions(TWorldState worldState, [MaybeNullWhen(false)] out TActionHandle handle);
+
+        /// <summary>
+        /// Get the cost of execution this action and the preconditions required to execute this action..
+        /// </summary>
+        /// <param name="handle">Handle got from <see cref="CheckProceduralPreconditions(TWorldState, out TActionHandle)"/>.</param>
+        /// <param name="cost">Cost required to execute this action.</param>
+        /// <param name="goal">Preconditions requires to execute this action if returns <see langword="true"/>.</param>
+        /// <returns>If <see langword="true"/>, <paramref name="goal"/> contains the required preconditions. On <see langword="false"/>, there are no preconditions.</returns>
+        bool GetCostAndRequiredGoal(TActionHandle handle, out float cost, out TGoal goal);
 
         /// <summary>
         /// Applies the effects of this action to a world.<br/>
         /// Note that this method must not consume the required preconditions, if any.<br/>
-        /// Note that if the world state doesn't allow the execution of this action, it must fail silently.
         /// </summary>
         /// <param name="worldState">World state where effects are being applied.</param>
-        /// <param name="handle">Opaque handle that will be passed to <see cref="GetCostAndRequiredGoal(TWorldState, TActionHandle, out TGoal, out float)"/>.</param>
-        void ApplyEffect(TWorldState worldState, out TActionHandle handle);
+        /// <param name="handle">Handle got from <see cref="CheckProceduralPreconditions(TWorldState, out TActionHandle)"/>.</param>
+        void ApplyEffect(TWorldState worldState, TActionHandle handle);
     }
 }
