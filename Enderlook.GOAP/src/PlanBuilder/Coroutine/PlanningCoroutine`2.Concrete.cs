@@ -6,16 +6,16 @@ using System.Diagnostics;
 
 namespace Enderlook.GOAP
 {
-    internal class PlanningCoroutine<TAgent, TWorldState, TGoal, TAction, TActionHandle, TWatchdog, TLog> : PlanningCoroutine<TGoal, TAction, TActionHandle>
-        where TAgent : IAgent<TWorldState, TGoal, TAction, TActionHandle>
+    internal class PlanningCoroutine<TAgent, TWorldState, TGoal, TAction, TWatchdog, TLog> : PlanningCoroutine<TGoal, TAction>
+        where TAgent : IAgent<TWorldState, TGoal, TAction>
         where TWorldState : IWorldState<TWorldState>
         where TGoal : IGoal<TWorldState>
-        where TAction : IAction<TWorldState, TGoal, TActionHandle>
+        where TAction : IAction<TWorldState, TGoal>
         where TWatchdog : IWatchdog
     {
-        private PlanBuilderIterator<TAgent, TWorldState, TGoal, TAction, TActionHandle, TWatchdog, TLog> iterator;
+        private PlanBuilderIterator<TAgent, TWorldState, TGoal, TAction, TWatchdog, TLog> iterator;
 
-        public PlanningCoroutine(PlanBuilderIterator<TAgent, TWorldState, TGoal, TAction, TActionHandle, TWatchdog, TLog> iterator)
+        public PlanningCoroutine(PlanBuilderIterator<TAgent, TWorldState, TGoal, TAction, TWatchdog, TLog> iterator)
         {
             this.iterator = iterator;
             state = Initialize;
@@ -27,7 +27,7 @@ namespace Enderlook.GOAP
             state = Disposed;
         }
 
-        public override Plan<TGoal, TAction, TActionHandle> GetAssociatedPlan() => iterator.Plan;
+        public override Plan<TGoal, TAction> GetAssociatedPlan() => iterator.Plan;
 
         public override bool MoveNext()
         {

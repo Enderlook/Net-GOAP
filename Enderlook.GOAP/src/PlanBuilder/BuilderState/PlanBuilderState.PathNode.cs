@@ -6,13 +6,12 @@ using System.Text;
 
 namespace Enderlook.GOAP
 {
-    internal sealed partial class PlanBuilderState<TWorldState, TGoal, TAction, TActionHandle>
+    internal sealed partial class PlanBuilderState<TWorldState, TGoal, TAction>
     {
         private struct PathNode
         {
             public int Parent;
             public int Action;
-            public TActionHandle? Handle;
             public int Goals;
             public TWorldState? World;
             public Type Mode;
@@ -33,27 +32,24 @@ namespace Enderlook.GOAP
                 Goals = goals;
                 World = world;
                 Action = -1;
-                Handle = default;
                 Mode = Type.Start;
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public PathNode(int parent, int action, TActionHandle handle)
+            public PathNode(int parent, int action)
             {
                 Parent = parent;
                 Action = action;
-                Handle = handle;
                 Goals = default;
                 World = default;
                 Mode = Type.End;
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public PathNode(int parent, int action, TActionHandle handle, int goals, TWorldState world)
+            public PathNode(int parent, int action, int goals, TWorldState world)
             {
                 Parent = parent;
                 Action = action;
-                Handle = handle;
                 Goals = goals;
                 World = world;
                 Mode = Type.Normal;
@@ -68,7 +64,7 @@ namespace Enderlook.GOAP
                     World = default;
             }
 
-            public string ToLogText(PlanBuilderState<TWorldState, TGoal, TAction, TActionHandle> planBuilder, int id)
+            public string ToLogText(PlanBuilderState<TWorldState, TGoal, TAction> planBuilder, int id)
             {
                 StringBuilder builder = planBuilder.builder;
                 int initialLength = builder.Length;

@@ -13,14 +13,14 @@ namespace Enderlook.GOAP.Planning
     /// This type is an implementation detail an shall never be used in parameters, fields, variables or return types.<br/>
     /// It should only be used in chaining calls.
     /// </summary>
-    public readonly struct PlanBuilderHelper<TWorldState, TGoal, TGoals, TAction, TActionHandle, TActions, TWatchdog, THelper>
+    public readonly struct PlanBuilderHelper<TWorldState, TGoal, TGoals, TAction, TActions, TWatchdog, THelper>
         where TWorldState : IWorldState<TWorldState>
         where TGoal : IGoal<TWorldState>
-        where TAction : IAction<TWorldState, TGoal, TActionHandle>
+        where TAction : IAction<TWorldState, TGoal>
         where TActions : IEnumerable<TAction>
         where TWatchdog : IWatchdog
     {
-        private readonly Plan<TGoal, TAction, TActionHandle> plan;
+        private readonly Plan<TGoal, TAction> plan;
         private readonly TWorldState worldState;
         private readonly TActions actions;
         private readonly TGoals goals;
@@ -29,7 +29,7 @@ namespace Enderlook.GOAP.Planning
         private readonly THelper helper;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal PlanBuilderHelper(Plan<TGoal, TAction, TActionHandle> plan, TWorldState worldState, TActions actions, TGoals goals, Action<string>? log, TWatchdog watchdog, THelper helper)
+        internal PlanBuilderHelper(Plan<TGoal, TAction> plan, TWorldState worldState, TActions actions, TGoals goals, Action<string>? log, TWatchdog watchdog, THelper helper)
         {
             Debug.Assert(plan is not null);
             Debug.Assert(worldState is not null);
@@ -57,9 +57,9 @@ namespace Enderlook.GOAP.Planning
             static void ThrowNullHelperException() => throw new ArgumentNullException(nameof(helper));
         }
 
-        /// <inheritdoc cref="PlanBuilderGoal{TWorldState, TGoal, TGoals, TAction, TActionHandle, TActions}.Execute"/>
+        /// <inheritdoc cref="PlanBuilderGoal{TWorldState, TGoal, TGoals, TAction, TActions}.Execute"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Plan<TGoal, TAction, TActionHandle> Execute()
+        public Plan<TGoal, TAction> Execute()
         {
             if (plan is null)
                 Planner.ThrowInstanceIsDefault();
@@ -71,91 +71,45 @@ namespace Enderlook.GOAP.Planning
             bool goalPool = typeof(IGoalPool<TGoal>).IsAssignableFrom(helperType);
             bool worldStatePool = typeof(IWorldStatePool<TWorldState>).IsAssignableFrom(helperType);
             bool goalMerge = typeof(IGoalMerge<TGoal>).IsAssignableFrom(helperType);
-            bool actionHandlePool = typeof(IActionHandlePool<TActionHandle>).IsAssignableFrom(helperType);
 
             if (goalPool)
             {
                 if (worldStatePool)
                 {
                     if (goalMerge)
-                    {
-                        if (actionHandlePool)
-                            Planner.RunAndDispose<AgentWrapperPoolGoalPoolWorldMergeGoalPoolActionHandle<TWorldState, TGoal, TAction, TActionHandle, TGoals, TActions, THelper>, TWorldState, TGoal, TAction, TActionHandle, TWatchdog>(
-                                new(worldState, goals, actions, helper), plan, watchdog, log);
-                        else
-                            Planner.RunAndDispose<AgentWrapperPoolGoalPoolWorldMergeGoal<TWorldState, TGoal, TAction, TActionHandle, TGoals, TActions, THelper>, TWorldState, TGoal, TAction, TActionHandle, TWatchdog>(
-                                new(worldState, goals, actions, helper), plan, watchdog, log);
-                    }
+                        Planner.RunAndDispose<AgentWrapperPoolGoalPoolWorldMergeGoal<TWorldState, TGoal, TAction, TGoals, TActions, THelper>, TWorldState, TGoal, TAction, TWatchdog>(
+                            new(worldState, goals, actions, helper), plan, watchdog, log);
                     else
-                    {
-                        if (actionHandlePool)
-                            Planner.RunAndDispose<AgentWrapperPoolGoalPoolWorldPoolActionHandle<TWorldState, TGoal, TAction, TActionHandle, TGoals, TActions, THelper>, TWorldState, TGoal, TAction, TActionHandle, TWatchdog>(
-                                new(worldState, goals, actions, helper), plan, watchdog, log);
-                        else
-                            Planner.RunAndDispose<AgentWrapperPoolGoalPoolWorld<TWorldState, TGoal, TAction, TActionHandle, TGoals, TActions, THelper>, TWorldState, TGoal, TAction, TActionHandle, TWatchdog>(
-                                new(worldState, goals, actions, helper), plan, watchdog, log);
-                    }
+                        Planner.RunAndDispose<AgentWrapperPoolGoalPoolWorld<TWorldState, TGoal, TAction, TGoals, TActions, THelper>, TWorldState, TGoal, TAction, TWatchdog>(
+                            new(worldState, goals, actions, helper), plan, watchdog, log);
                 }
                 else if (goalMerge)
-                {
-                    if (actionHandlePool)
-                        Planner.RunAndDispose<AgentWrapperPoolGoalMergeGoalPoolActionHandle<TWorldState, TGoal, TAction, TActionHandle, TGoals, TActions, THelper>, TWorldState, TGoal, TAction, TActionHandle, TWatchdog>(
-                            new(worldState, goals, actions, helper), plan, watchdog, log);
-                    else
-                        Planner.RunAndDispose<AgentWrapperPoolGoalMergeGoal<TWorldState, TGoal, TAction, TActionHandle, TGoals, TActions, THelper>, TWorldState, TGoal, TAction, TActionHandle, TWatchdog>(
-                            new(worldState, goals, actions, helper), plan, watchdog, log);
-                }
+                    Planner.RunAndDispose<AgentWrapperPoolGoalMergeGoal<TWorldState, TGoal, TAction, TGoals, TActions, THelper>, TWorldState, TGoal, TAction, TWatchdog>(
+                        new(worldState, goals, actions, helper), plan, watchdog, log);
                 else
-                {
-                    if (actionHandlePool)
-                        Planner.RunAndDispose<AgentWrapperPoolGoalPoolActionHandle<TWorldState, TGoal, TAction, TActionHandle, TGoals, TActions, THelper>, TWorldState, TGoal, TAction, TActionHandle, TWatchdog>(
-                            new(worldState, goals, actions, helper), plan, watchdog, log);
-                    else
-                        Planner.RunAndDispose<AgentWrapperPoolGoal<TWorldState, TGoal, TAction, TActionHandle, TGoals, TActions, THelper>, TWorldState, TGoal, TAction, TActionHandle, TWatchdog>(
-                            new(worldState, goals, actions, helper), plan, watchdog, log);
-                }
+                    Planner.RunAndDispose<AgentWrapperPoolGoal<TWorldState, TGoal, TAction, TGoals, TActions, THelper>, TWorldState, TGoal, TAction, TWatchdog>(
+                        new(worldState, goals, actions, helper), plan, watchdog, log);
             }
             else if (worldStatePool)
             {
                 if (goalMerge)
-                {
-                    if (actionHandlePool)
-                        Planner.RunAndDispose<AgentWrapperPoolWorldMergeGoalPoolActionHandle<TWorldState, TGoal, TAction, TActionHandle, TGoals, TActions, THelper>, TWorldState, TGoal, TAction, TActionHandle, TWatchdog>(
-                            new(worldState, goals, actions, helper), plan, watchdog, log);
-                    else
-                        Planner.RunAndDispose<AgentWrapperPoolWorldMergeGoal<TWorldState, TGoal, TAction, TActionHandle, TGoals, TActions, THelper>, TWorldState, TGoal, TAction, TActionHandle, TWatchdog>(
-                            new(worldState, goals, actions, helper), plan, watchdog, log);
-                }
+                    Planner.RunAndDispose<AgentWrapperPoolWorldMergeGoal<TWorldState, TGoal, TAction, TGoals, TActions, THelper>, TWorldState, TGoal, TAction, TWatchdog>(
+                        new(worldState, goals, actions, helper), plan, watchdog, log);
                 else
-                {
-                    if (actionHandlePool)
-                        Planner.RunAndDispose<AgentWrapperPoolWorldPoolActionHandle<TWorldState, TGoal, TAction, TActionHandle, TGoals, TActions, THelper>, TWorldState, TGoal, TAction, TActionHandle, TWatchdog>(
-                            new(worldState, goals, actions, helper), plan, watchdog, log);
-                    else
-                        Planner.RunAndDispose<AgentWrapperPoolWorld<TWorldState, TGoal, TAction, TActionHandle, TGoals, TActions, THelper>, TWorldState, TGoal, TAction, TActionHandle, TWatchdog>(
-                            new(worldState, goals, actions, helper), plan, watchdog, log);
-                }
+                    Planner.RunAndDispose<AgentWrapperPoolWorld<TWorldState, TGoal, TAction, TGoals, TActions, THelper>, TWorldState, TGoal, TAction, TWatchdog>(
+                        new(worldState, goals, actions, helper), plan, watchdog, log);
             }
             else if (goalMerge)
-            {
-                if (actionHandlePool)
-                    Planner.RunAndDispose<AgentWrapperMergeGoalPoolActionHandle<TWorldState, TGoal, TAction, TActionHandle, TGoals, TActions, THelper>, TWorldState, TGoal, TAction, TActionHandle, TWatchdog>(
-                        new(worldState, goals, actions, helper), plan, watchdog, log);
-                else
-                    Planner.RunAndDispose<AgentWrapperMergeGoal<TWorldState, TGoal, TAction, TActionHandle, TGoals, TActions, THelper>, TWorldState, TGoal, TAction, TActionHandle, TWatchdog>(
-                        new(worldState, goals, actions, helper), plan, watchdog, log);
-            }
-            else if (actionHandlePool)
-                Planner.RunAndDispose<AgentWrapperPoolActionHandle<TWorldState, TGoal, TAction, TActionHandle, TGoals, TActions, THelper>, TWorldState, TGoal, TAction, TActionHandle, TWatchdog>(
+                Planner.RunAndDispose<AgentWrapperMergeGoal<TWorldState, TGoal, TAction, TGoals, TActions, THelper>, TWorldState, TGoal, TAction, TWatchdog>(
                     new(worldState, goals, actions, helper), plan, watchdog, log);
             else
                 ThrowTypeMistmachException();
             return plan;
         }
 
-        /// <inheritdoc cref="PlanBuilderGoal{TWorldState, TGoal, TGoals, TAction, TActionHandle, TActions}.ExecuteAsync"/>
+        /// <inheritdoc cref="PlanBuilderGoal{TWorldState, TGoal, TGoals, TAction, TActions}.ExecuteAsync"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ValueTask<Plan<TGoal, TAction, TActionHandle>> ExecuteAsync()
+        public ValueTask<Plan<TGoal, TAction>> ExecuteAsync()
         {
             if (plan is null)
                 Planner.ThrowInstanceIsDefault();
@@ -167,82 +121,36 @@ namespace Enderlook.GOAP.Planning
             bool goalPool = typeof(IGoalPool<TGoal>).IsAssignableFrom(helperType);
             bool worldStatePool = typeof(IWorldStatePool<TWorldState>).IsAssignableFrom(helperType);
             bool goalMerge = typeof(IGoalMerge<TGoal>).IsAssignableFrom(helperType);
-            bool actionHandlePool = typeof(IActionHandlePool<TActionHandle>).IsAssignableFrom(helperType);
 
             if (goalPool)
             {
                 if (worldStatePool)
                 {
                     if (goalMerge)
-                    {
-                        if (actionHandlePool)
-                            return Planner.RunAndDisposeAsync<AgentWrapperPoolGoalPoolWorldMergeGoalPoolActionHandle<TWorldState, TGoal, TAction, TActionHandle, TGoals, TActions, THelper>, TWorldState, TGoal, TAction, TActionHandle, TWatchdog>(
-                                new(worldState, goals, actions, helper), plan, watchdog, log);
-                        else
-                            return Planner.RunAndDisposeAsync<AgentWrapperPoolGoalPoolWorldMergeGoal<TWorldState, TGoal, TAction, TActionHandle, TGoals, TActions, THelper>, TWorldState, TGoal, TAction, TActionHandle, TWatchdog>(
-                                new(worldState, goals, actions, helper), plan, watchdog, log);
-                    }
+                        return Planner.RunAndDisposeAsync<AgentWrapperPoolGoalPoolWorldMergeGoal<TWorldState, TGoal, TAction, TGoals, TActions, THelper>, TWorldState, TGoal, TAction, TWatchdog>(
+                            new(worldState, goals, actions, helper), plan, watchdog, log);
                     else
-                    {
-                        if (actionHandlePool)
-                            return Planner.RunAndDisposeAsync<AgentWrapperPoolGoalPoolWorldPoolActionHandle<TWorldState, TGoal, TAction, TActionHandle, TGoals, TActions, THelper>, TWorldState, TGoal, TAction, TActionHandle, TWatchdog>(
-                                new(worldState, goals, actions, helper), plan, watchdog, log);
-                        else
-                            return Planner.RunAndDisposeAsync<AgentWrapperPoolGoalPoolWorld<TWorldState, TGoal, TAction, TActionHandle, TGoals, TActions, THelper>, TWorldState, TGoal, TAction, TActionHandle, TWatchdog>(
-                                new(worldState, goals, actions, helper), plan, watchdog, log);
-                    }
+                        return Planner.RunAndDisposeAsync<AgentWrapperPoolGoalPoolWorld<TWorldState, TGoal, TAction, TGoals, TActions, THelper>, TWorldState, TGoal, TAction, TWatchdog>(
+                            new(worldState, goals, actions, helper), plan, watchdog, log);
                 }
                 else if (goalMerge)
-                {
-                    if (actionHandlePool)
-                        return Planner.RunAndDisposeAsync<AgentWrapperPoolGoalMergeGoalPoolActionHandle<TWorldState, TGoal, TAction, TActionHandle, TGoals, TActions, THelper>, TWorldState, TGoal, TAction, TActionHandle, TWatchdog>(
-                            new(worldState, goals, actions, helper), plan, watchdog, log);
-                    else
-                        return Planner.RunAndDisposeAsync<AgentWrapperPoolGoalMergeGoal<TWorldState, TGoal, TAction, TActionHandle, TGoals, TActions, THelper>, TWorldState, TGoal, TAction, TActionHandle, TWatchdog>(
-                            new(worldState, goals, actions, helper), plan, watchdog, log);
-                }
+                    return Planner.RunAndDisposeAsync<AgentWrapperPoolGoalMergeGoal<TWorldState, TGoal, TAction, TGoals, TActions, THelper>, TWorldState, TGoal, TAction, TWatchdog>(
+                        new(worldState, goals, actions, helper), plan, watchdog, log);
                 else
-                {
-                    if (actionHandlePool)
-                        return Planner.RunAndDisposeAsync<AgentWrapperPoolGoalPoolActionHandle<TWorldState, TGoal, TAction, TActionHandle, TGoals, TActions, THelper>, TWorldState, TGoal, TAction, TActionHandle, TWatchdog>(
-                            new(worldState, goals, actions, helper), plan, watchdog, log);
-                    else
-                        return Planner.RunAndDisposeAsync<AgentWrapperPoolGoal<TWorldState, TGoal, TAction, TActionHandle, TGoals, TActions, THelper>, TWorldState, TGoal, TAction, TActionHandle, TWatchdog>(
-                            new(worldState, goals, actions, helper), plan, watchdog, log);
-                }
+                    return Planner.RunAndDisposeAsync<AgentWrapperPoolGoal<TWorldState, TGoal, TAction, TGoals, TActions, THelper>, TWorldState, TGoal, TAction, TWatchdog>(
+                        new(worldState, goals, actions, helper), plan, watchdog, log);
             }
             else if (worldStatePool)
             {
                 if (goalMerge)
-                {
-                    if (actionHandlePool)
-                        return Planner.RunAndDisposeAsync<AgentWrapperPoolWorldMergeGoalPoolActionHandle<TWorldState, TGoal, TAction, TActionHandle, TGoals, TActions, THelper>, TWorldState, TGoal, TAction, TActionHandle, TWatchdog>(
-                             new(worldState, goals, actions, helper), plan, watchdog, log);
-                    else
-                        return Planner.RunAndDisposeAsync<AgentWrapperPoolWorldMergeGoal<TWorldState, TGoal, TAction, TActionHandle, TGoals, TActions, THelper>, TWorldState, TGoal, TAction, TActionHandle, TWatchdog>(
-                             new(worldState, goals, actions, helper), plan, watchdog, log);
-                }
+                    return Planner.RunAndDisposeAsync<AgentWrapperPoolWorldMergeGoal<TWorldState, TGoal, TAction, TGoals, TActions, THelper>, TWorldState, TGoal, TAction, TWatchdog>(
+                            new(worldState, goals, actions, helper), plan, watchdog, log);
                 else
-                {
-                    if (actionHandlePool)
-                        return Planner.RunAndDisposeAsync<AgentWrapperPoolWorldPoolActionHandle<TWorldState, TGoal, TAction, TActionHandle, TGoals, TActions, THelper>, TWorldState, TGoal, TAction, TActionHandle, TWatchdog>(
-                            new(worldState, goals, actions, helper), plan, watchdog, log);
-                    else
-                        return Planner.RunAndDisposeAsync<AgentWrapperPoolWorld<TWorldState, TGoal, TAction, TActionHandle, TGoals, TActions, THelper>, TWorldState, TGoal, TAction, TActionHandle, TWatchdog>(
-                            new(worldState, goals, actions, helper), plan, watchdog, log);
-                }
+                    return Planner.RunAndDisposeAsync<AgentWrapperPoolWorld<TWorldState, TGoal, TAction, TGoals, TActions, THelper>, TWorldState, TGoal, TAction, TWatchdog>(
+                        new(worldState, goals, actions, helper), plan, watchdog, log);
             }
             else if (goalMerge)
-            {
-                if (actionHandlePool)
-                    return Planner.RunAndDisposeAsync<AgentWrapperMergeGoalPoolActionHandle<TWorldState, TGoal, TAction, TActionHandle, TGoals, TActions, THelper>, TWorldState, TGoal, TAction, TActionHandle, TWatchdog>(
-                        new(worldState, goals, actions, helper), plan, watchdog, log);
-                else
-                    return Planner.RunAndDisposeAsync<AgentWrapperMergeGoal<TWorldState, TGoal, TAction, TActionHandle, TGoals, TActions, THelper>, TWorldState, TGoal, TAction, TActionHandle, TWatchdog>(
-                        new(worldState, goals, actions, helper), plan, watchdog, log);
-            }
-            else if (actionHandlePool)
-                return Planner.RunAndDisposeAsync<AgentWrapperPoolActionHandle<TWorldState, TGoal, TAction, TActionHandle, TGoals, TActions, THelper>, TWorldState, TGoal, TAction, TActionHandle, TWatchdog>(
+                return Planner.RunAndDisposeAsync<AgentWrapperMergeGoal<TWorldState, TGoal, TAction, TGoals, TActions, THelper>, TWorldState, TGoal, TAction, TWatchdog>(
                     new(worldState, goals, actions, helper), plan, watchdog, log);
             else
             {
@@ -251,9 +159,9 @@ namespace Enderlook.GOAP.Planning
             }
         }
 
-        /// <inheritdoc cref="PlanBuilderGoal{TWorldState, TGoal, TGoals, TAction, TActionHandle, TActions}.ExecuteCoroutine"/>
+        /// <inheritdoc cref="PlanBuilderGoal{TWorldState, TGoal, TGoals, TAction, TActions}.ExecuteCoroutine"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public PlanningCoroutine<TGoal, TAction, TActionHandle> ExecuteCoroutine()
+        public PlanningCoroutine<TGoal, TAction> ExecuteCoroutine()
         {
             if (plan is null)
                 Planner.ThrowInstanceIsDefault();
@@ -265,82 +173,36 @@ namespace Enderlook.GOAP.Planning
             bool goalPool = typeof(IGoalPool<TGoal>).IsAssignableFrom(helperType);
             bool worldStatePool = typeof(IWorldStatePool<TWorldState>).IsAssignableFrom(helperType);
             bool goalMerge = typeof(IGoalMerge<TGoal>).IsAssignableFrom(helperType);
-            bool actionHandlePool = typeof(IActionHandlePool<TActionHandle>).IsAssignableFrom(helperType);
 
             if (goalPool)
             {
                 if (worldStatePool)
                 {
                     if (goalMerge)
-                    {
-                        if (actionHandlePool)
-                            return Planner.RunAndDisposeCoroutine<AgentWrapperPoolGoalPoolWorldMergeGoalPoolActionHandle<TWorldState, TGoal, TAction, TActionHandle, TGoals, TActions, THelper>, TWorldState, TGoal, TAction, TActionHandle, TWatchdog>(
-                                new(worldState, goals, actions, helper), plan, watchdog, log);
-                        else
-                            return Planner.RunAndDisposeCoroutine<AgentWrapperPoolGoalPoolWorldMergeGoal<TWorldState, TGoal, TAction, TActionHandle, TGoals, TActions, THelper>, TWorldState, TGoal, TAction, TActionHandle, TWatchdog>(
-                                new(worldState, goals, actions, helper), plan, watchdog, log);
-                    }
+                        return Planner.RunAndDisposeCoroutine<AgentWrapperPoolGoalPoolWorldMergeGoal<TWorldState, TGoal, TAction, TGoals, TActions, THelper>, TWorldState, TGoal, TAction, TWatchdog>(
+                            new(worldState, goals, actions, helper), plan, watchdog, log);
                     else
-                    {
-                        if (actionHandlePool)
-                            return Planner.RunAndDisposeCoroutine<AgentWrapperPoolGoalPoolWorldPoolActionHandle<TWorldState, TGoal, TAction, TActionHandle, TGoals, TActions, THelper>, TWorldState, TGoal, TAction, TActionHandle, TWatchdog>(
-                                new(worldState, goals, actions, helper), plan, watchdog, log);
-                        else
-                            return Planner.RunAndDisposeCoroutine<AgentWrapperPoolGoalPoolWorld<TWorldState, TGoal, TAction, TActionHandle, TGoals, TActions, THelper>, TWorldState, TGoal, TAction, TActionHandle, TWatchdog>(
-                                new(worldState, goals, actions, helper), plan, watchdog, log);
-                    }
+                        return Planner.RunAndDisposeCoroutine<AgentWrapperPoolGoalPoolWorld<TWorldState, TGoal, TAction, TGoals, TActions, THelper>, TWorldState, TGoal, TAction, TWatchdog>(
+                            new(worldState, goals, actions, helper), plan, watchdog, log);
                 }
                 else if (goalMerge)
-                {
-                    if (actionHandlePool)
-                        return Planner.RunAndDisposeCoroutine<AgentWrapperPoolGoalMergeGoalPoolActionHandle<TWorldState, TGoal, TAction, TActionHandle, TGoals, TActions, THelper>, TWorldState, TGoal, TAction, TActionHandle, TWatchdog>(
-                            new(worldState, goals, actions, helper), plan, watchdog, log);
-                    else
-                        return Planner.RunAndDisposeCoroutine<AgentWrapperPoolGoalMergeGoal<TWorldState, TGoal, TAction, TActionHandle, TGoals, TActions, THelper>, TWorldState, TGoal, TAction, TActionHandle, TWatchdog>(
-                            new(worldState, goals, actions, helper), plan, watchdog, log);
-                }
+                    return Planner.RunAndDisposeCoroutine<AgentWrapperPoolGoalMergeGoal<TWorldState, TGoal, TAction, TGoals, TActions, THelper>, TWorldState, TGoal, TAction, TWatchdog>(
+                        new(worldState, goals, actions, helper), plan, watchdog, log);
                 else
-                {
-                    if (actionHandlePool)
-                        return Planner.RunAndDisposeCoroutine<AgentWrapperPoolGoalPoolActionHandle<TWorldState, TGoal, TAction, TActionHandle, TGoals, TActions, THelper>, TWorldState, TGoal, TAction, TActionHandle, TWatchdog>(
-                            new(worldState, goals, actions, helper), plan, watchdog, log);
-                    else
-                        return Planner.RunAndDisposeCoroutine<AgentWrapperPoolGoal<TWorldState, TGoal, TAction, TActionHandle, TGoals, TActions, THelper>, TWorldState, TGoal, TAction, TActionHandle, TWatchdog>(
-                            new(worldState, goals, actions, helper), plan, watchdog, log);
-                }
+                    return Planner.RunAndDisposeCoroutine<AgentWrapperPoolGoal<TWorldState, TGoal, TAction, TGoals, TActions, THelper>, TWorldState, TGoal, TAction, TWatchdog>(
+                        new(worldState, goals, actions, helper), plan, watchdog, log);
             }
             else if (worldStatePool)
             {
                 if (goalMerge)
-                {
-                    if (actionHandlePool)
-                        return Planner.RunAndDisposeCoroutine<AgentWrapperPoolWorldMergeGoalPoolActionHandle<TWorldState, TGoal, TAction, TActionHandle, TGoals, TActions, THelper>, TWorldState, TGoal, TAction, TActionHandle, TWatchdog>(
-                             new(worldState, goals, actions, helper), plan, watchdog, log);
-                    else
-                        return Planner.RunAndDisposeCoroutine<AgentWrapperPoolWorldMergeGoal<TWorldState, TGoal, TAction, TActionHandle, TGoals, TActions, THelper>, TWorldState, TGoal, TAction, TActionHandle, TWatchdog>(
-                             new(worldState, goals, actions, helper), plan, watchdog, log);
-                }
+                    return Planner.RunAndDisposeCoroutine<AgentWrapperPoolWorldMergeGoal<TWorldState, TGoal, TAction, TGoals, TActions, THelper>, TWorldState, TGoal, TAction, TWatchdog>(
+                            new(worldState, goals, actions, helper), plan, watchdog, log);
                 else
-                {
-                    if (actionHandlePool)
-                        return Planner.RunAndDisposeCoroutine<AgentWrapperPoolWorldPoolActionHandle<TWorldState, TGoal, TAction, TActionHandle, TGoals, TActions, THelper>, TWorldState, TGoal, TAction, TActionHandle, TWatchdog>(
-                            new(worldState, goals, actions, helper), plan, watchdog, log);
-                    else
-                        return Planner.RunAndDisposeCoroutine<AgentWrapperPoolWorld<TWorldState, TGoal, TAction, TActionHandle, TGoals, TActions, THelper>, TWorldState, TGoal, TAction, TActionHandle, TWatchdog>(
-                            new(worldState, goals, actions, helper), plan, watchdog, log);
-                }
+                    return Planner.RunAndDisposeCoroutine<AgentWrapperPoolWorld<TWorldState, TGoal, TAction, TGoals, TActions, THelper>, TWorldState, TGoal, TAction, TWatchdog>(
+                        new(worldState, goals, actions, helper), plan, watchdog, log);
             }
             else if (goalMerge)
-            {
-                if (actionHandlePool)
-                    return Planner.RunAndDisposeCoroutine<AgentWrapperMergeGoalPoolActionHandle<TWorldState, TGoal, TAction, TActionHandle, TGoals, TActions, THelper>, TWorldState, TGoal, TAction, TActionHandle, TWatchdog>(
-                        new(worldState, goals, actions, helper), plan, watchdog, log);
-                else
-                    return Planner.RunAndDisposeCoroutine<AgentWrapperMergeGoal<TWorldState, TGoal, TAction, TActionHandle, TGoals, TActions, THelper>, TWorldState, TGoal, TAction, TActionHandle, TWatchdog>(
-                        new(worldState, goals, actions, helper), plan, watchdog, log);
-            }
-            else if (actionHandlePool)
-                return Planner.RunAndDisposeCoroutine<AgentWrapperPoolActionHandle<TWorldState, TGoal, TAction, TActionHandle, TGoals, TActions, THelper>, TWorldState, TGoal, TAction, TActionHandle, TWatchdog>(
+                return Planner.RunAndDisposeCoroutine<AgentWrapperMergeGoal<TWorldState, TGoal, TAction, TGoals, TActions, THelper>, TWorldState, TGoal, TAction, TWatchdog>(
                     new(worldState, goals, actions, helper), plan, watchdog, log);
             else
             {

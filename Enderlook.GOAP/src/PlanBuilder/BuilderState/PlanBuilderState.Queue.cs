@@ -6,7 +6,7 @@ using System.Runtime.CompilerServices;
 
 namespace Enderlook.GOAP
 {
-    internal sealed partial class PlanBuilderState<TWorldState, TGoal, TAction, TActionHandle>
+    internal sealed partial class PlanBuilderState<TWorldState, TGoal, TAction>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void Enqueue<TLog>(PathNode node, float cost)
@@ -32,30 +32,30 @@ namespace Enderlook.GOAP
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void EnqueueValidPath<TLog>(int parent, int action, TActionHandle handle, float cost)
+        public void EnqueueValidPath<TLog>(int parent, int action, float cost)
         {
             if (Toggle.IsOn<TLog>())
                 builder.Append("Enqueue Valid Path: ");
             endNode = nodes.Count;
             this.cost = cost;
             state |= State.Found;
-            Enqueue<TLog>(new(parent, action, handle), cost);
+            Enqueue<TLog>(new(parent, action), cost);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Enqueue<TLog>(int parent, int action, TActionHandle handle, float cost, int goals, TWorldState world)
+        public void Enqueue<TLog>(int parent, int action, float cost, int goals, TWorldState world)
         {
             if (Toggle.IsOn<TLog>())
                 builder.Append("Enqueue: ");
-            Enqueue<TLog>(new(parent, action, handle, goals, world), cost);
+            Enqueue<TLog>(new(parent, action, goals, world), cost);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Enqueue<TLog>(int parent, int action, TActionHandle handle, float cost, TGoal goal, TWorldState world)
+        public void Enqueue<TLog>(int parent, int action, float cost, TGoal goal, TWorldState world)
         {
             if (Toggle.IsOn<TLog>())
                 builder.Append("Enqueue: ");
-            Enqueue<TLog>(new(parent, action, handle, GoalNode.Create(this, goal), world), cost);
+            Enqueue<TLog>(new(parent, action, GoalNode.Create(this, goal), world), cost);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -74,8 +74,7 @@ namespace Enderlook.GOAP
                     Log();
                 }
 
-                if (typeof(IWorldStatePool<TWorldState>).IsAssignableFrom(typeof(TAgent))
-                    || typeof(IActionHandlePool<TActionHandle>).IsAssignableFrom(typeof(TAgent)))
+                if (typeof(IWorldStatePool<TWorldState>).IsAssignableFrom(typeof(TAgent)))
                     node.WasDequeue();
 
                 if (node.Mode == PathNode.Type.End)

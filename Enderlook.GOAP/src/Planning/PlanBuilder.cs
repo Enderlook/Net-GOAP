@@ -9,19 +9,19 @@ namespace Enderlook.GOAP.Planning
     /// This type is an implementation detail an shall never be used in parameters, fields, variables or return types.<br/>
     /// It should only be used in chaining calls.
     /// </summary>
-    public readonly ref struct PlanBuilder<TWorldState, TGoal, TAction, TActionHandle, TActions>
+    public readonly ref struct PlanBuilder<TWorldState, TGoal, TAction, TActions>
         where TWorldState : IWorldState<TWorldState>
         where TGoal : IGoal<TWorldState>
-        where TAction : IAction<TWorldState, TGoal, TActionHandle>
+        where TAction : IAction<TWorldState, TGoal>
         where TActions : IEnumerable<TAction>
     {
-        private readonly Plan<TGoal, TAction, TActionHandle> plan;
+        private readonly Plan<TGoal, TAction> plan;
         private readonly TWorldState worldState;
         private readonly TActions actions;
         private readonly Action<string>? log;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal PlanBuilder(Plan<TGoal, TAction, TActionHandle> plan, TWorldState worldState, TActions actions, Action<string>? log)
+        internal PlanBuilder(Plan<TGoal, TAction> plan, TWorldState worldState, TActions actions, Action<string>? log)
         {
             if (plan is null)
                 ThrowNullPlanException();
@@ -54,7 +54,7 @@ namespace Enderlook.GOAP.Planning
         /// <exception cref="ArgumentException">Thrown when instance is default.</exception>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="goal"/> is <see langword="null"/>.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public PlanBuilderGoal<TWorldState, TGoal, SingleGoal<TGoal>, TAction, TActionHandle, TActions> CompleteGoal(TGoal goal)
+        public PlanBuilderGoal<TWorldState, TGoal, SingleGoal<TGoal>, TAction, TActions> CompleteGoal(TGoal goal)
         {
             if (plan is null)
                 Planner.ThrowInstanceIsDefault();
@@ -70,7 +70,7 @@ namespace Enderlook.GOAP.Planning
         /// <exception cref="ArgumentException">Thrown when instance is default.</exception>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="goals"/> is <see langword="null"/>.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public PlanBuilderGoal<TWorldState, TGoal, CheapestGoal<TGoal>, TAction, TActionHandle, TActions> CompleteCheapestGoalOf(IEnumerable<TGoal> goals)
+        public PlanBuilderGoal<TWorldState, TGoal, CheapestGoal<TGoal>, TAction, TActions> CompleteCheapestGoalOf(IEnumerable<TGoal> goals)
         {
             if (plan is null)
                 Planner.ThrowInstanceIsDefault();

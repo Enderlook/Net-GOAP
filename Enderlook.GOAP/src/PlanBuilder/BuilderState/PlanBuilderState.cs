@@ -9,7 +9,7 @@ using System.Text;
 
 namespace Enderlook.GOAP
 {
-    internal sealed partial class PlanBuilderState<TWorldState, TGoal, TAction, TActionHandle>
+    internal sealed partial class PlanBuilderState<TWorldState, TGoal, TAction>
         where TWorldState : IWorldState<TWorldState>
         where TGoal : IGoal<TWorldState>
     {
@@ -68,7 +68,7 @@ namespace Enderlook.GOAP
                 AppendAndLog("Cancelled.");
         }
 
-        internal void Finalize<TAgent, TLog>(Plan<TGoal, TAction, TActionHandle> plan)
+        internal void Finalize<TAgent, TLog>(Plan<TGoal, TAction> plan)
         {
             Debug.Assert(typeof(TAgent).IsValueType, $"{nameof(TAgent)} must be a value type to constant propagate type checks.");
             Debug.Assert(plan is not null);
@@ -121,7 +121,7 @@ namespace Enderlook.GOAP
                 }
                 lastIndex = index;
 
-                plan.AddActionToPlan(node.Action, node.Handle!);
+                plan.AddActionToPlan(node.Action);
             }
 
             if (Toggle.IsOn<TLog>())
@@ -150,7 +150,6 @@ namespace Enderlook.GOAP
             void Clear<TIgnore>(int ignore)
             {
                 bool poolMemory = typeof(IWorldStatePool<TWorldState>).IsAssignableFrom(typeof(TAgent));
-                bool poolActionHandle = typeof(IActionHandlePool<TActionHandle>).IsAssignableFrom(typeof(TAgent));
 
                 for (int i = 0; i < nodes.Count; i++)
                 {
@@ -160,8 +159,6 @@ namespace Enderlook.GOAP
                         Debug.Assert(node.Mode == PathNode.Type.Start);
                         if (poolMemory)
                             ((IWorldStatePool<TWorldState>)agent).Return(node.World!);
-                        if (poolActionHandle)
-                            ((IActionHandlePool<TActionHandle>)agent).Return(node.Handle!);
                     }
                     else
                     {
@@ -172,8 +169,6 @@ namespace Enderlook.GOAP
                         {
                             if (poolMemory)
                                 ((IWorldStatePool<TWorldState>)agent).Return(node.World!);
-                            if (poolActionHandle)
-                                ((IActionHandlePool<TActionHandle>)agent).Return(node.Handle!);
                         }
                         else
                             Debug.Assert((node.Mode & (PathNode.Type.End)) != 0);

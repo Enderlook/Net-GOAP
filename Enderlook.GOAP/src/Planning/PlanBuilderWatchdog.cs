@@ -13,14 +13,14 @@ namespace Enderlook.GOAP.Planning
     /// This type is an implementation detail an shall never be used in parameters, fields, variables or return types.<br/>
     /// It should only be used in chaining calls.
     /// </summary>
-    public readonly struct PlanBuilderWatchdog<TWorldState, TGoal, TGoals, TAction, TActionHandle, TActions, TWatchdog>
+    public readonly struct PlanBuilderWatchdog<TWorldState, TGoal, TGoals, TAction, TActions, TWatchdog>
         where TWorldState : IWorldState<TWorldState>
         where TGoal : IGoal<TWorldState>
-        where TAction : IAction<TWorldState, TGoal, TActionHandle>
+        where TAction : IAction<TWorldState, TGoal>
         where TActions : IEnumerable<TAction>
         where TWatchdog : IWatchdog
     {
-        private readonly Plan<TGoal, TAction, TActionHandle> plan;
+        private readonly Plan<TGoal, TAction> plan;
         private readonly TWorldState worldState;
         private readonly TActions actions;
         private readonly TGoals goals;
@@ -28,7 +28,7 @@ namespace Enderlook.GOAP.Planning
         private readonly TWatchdog watchdog;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal PlanBuilderWatchdog(Plan<TGoal, TAction, TActionHandle> plan, TWorldState worldState, TActions actions, TGoals goals, Action<string>? log, TWatchdog? watchdog)
+        internal PlanBuilderWatchdog(Plan<TGoal, TAction> plan, TWorldState worldState, TActions actions, TGoals goals, Action<string>? log, TWatchdog? watchdog)
         {
             Debug.Assert(plan is not null);
             Debug.Assert(worldState is not null);
@@ -49,9 +49,9 @@ namespace Enderlook.GOAP.Planning
             static void ThrowNullWatchdogException() => throw new ArgumentNullException(nameof(watchdog));
         }
 
-        /// <inheritdoc cref="PlanBuilderGoal{TWorldState, TGoal, TGoals, TAction, TActionHandle, TActions}.WithHelper{THelper}(THelper)"/>
+        /// <inheritdoc cref="PlanBuilderGoal{TWorldState, TGoal, TGoals, TAction, TActions}.WithHelper{THelper}(THelper)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public PlanBuilderHelper<TWorldState, TGoal, TGoals, TAction, TActionHandle, TActions, TWatchdog, THelper> WithHelper<THelper>(THelper helper)
+        public PlanBuilderHelper<TWorldState, TGoal, TGoals, TAction, TActions, TWatchdog, THelper> WithHelper<THelper>(THelper helper)
         {
             if (plan is null)
                 Planner.ThrowInstanceIsDefault();
@@ -59,41 +59,41 @@ namespace Enderlook.GOAP.Planning
             return new(plan, worldState, actions, goals, log, watchdog, helper);
         }
 
-        /// <inheritdoc cref="PlanBuilderGoal{TWorldState, TGoal, TGoals, TAction, TActionHandle, TActions}.Execute"/>
+        /// <inheritdoc cref="PlanBuilderGoal{TWorldState, TGoal, TGoals, TAction, TActions}.Execute"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Plan<TGoal, TAction, TActionHandle> Execute()
+        public Plan<TGoal, TAction> Execute()
         {
             if (plan is null)
                 Planner.ThrowInstanceIsDefault();
             DebugAssert();
 
-            Planner.RunAndDispose<AgentWrapper<TWorldState, TGoal, TAction, TActionHandle, TGoals, TActions>, TWorldState, TGoal, TAction, TActionHandle, TWatchdog>(
+            Planner.RunAndDispose<AgentWrapper<TWorldState, TGoal, TAction, TGoals, TActions>, TWorldState, TGoal, TAction, TWatchdog>(
                 new(worldState, goals, actions), plan, watchdog, log);
             return plan;
         }
 
-        /// <inheritdoc cref="PlanBuilderGoal{TWorldState, TGoal, TGoals, TAction, TActionHandle, TActions}.ExecuteAsync"/>
+        /// <inheritdoc cref="PlanBuilderGoal{TWorldState, TGoal, TGoals, TAction, TActions}.ExecuteAsync"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public async ValueTask<Plan<TGoal, TAction, TActionHandle>> ExecuteAsync()
+        public async ValueTask<Plan<TGoal, TAction>> ExecuteAsync()
         {
             if (plan is null)
                 Planner.ThrowInstanceIsDefault();
             DebugAssert();
 
-            await Planner.RunAndDisposeAsync<AgentWrapper<TWorldState, TGoal, TAction, TActionHandle, TGoals, TActions>, TWorldState, TGoal, TAction, TActionHandle, TWatchdog>(
+            await Planner.RunAndDisposeAsync<AgentWrapper<TWorldState, TGoal, TAction, TGoals, TActions>, TWorldState, TGoal, TAction, TWatchdog>(
                 new(worldState, goals, actions), plan, watchdog, log);
             return plan;
         }
 
-        /// <inheritdoc cref="PlanBuilderGoal{TWorldState, TGoal, TGoals, TAction, TActionHandle, TActions}.ExecuteCoroutine"/>
+        /// <inheritdoc cref="PlanBuilderGoal{TWorldState, TGoal, TGoals, TAction, TActions}.ExecuteCoroutine"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public PlanningCoroutine<TGoal, TAction, TActionHandle> ExecuteCoroutine()
+        public PlanningCoroutine<TGoal, TAction> ExecuteCoroutine()
         {
             if (plan is null)
                 Planner.ThrowInstanceIsDefault();
             DebugAssert();
 
-            return Planner.RunAndDisposeCoroutine<AgentWrapper<TWorldState, TGoal, TAction, TActionHandle, TGoals, TActions>, TWorldState, TGoal, TAction, TActionHandle, TWatchdog>(
+            return Planner.RunAndDisposeCoroutine<AgentWrapper<TWorldState, TGoal, TAction, TGoals, TActions>, TWorldState, TGoal, TAction, TWatchdog>(
                 new(worldState, goals, actions), plan, watchdog, log);
         }
 
