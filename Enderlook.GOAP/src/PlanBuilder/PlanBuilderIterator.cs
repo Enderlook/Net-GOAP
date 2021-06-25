@@ -251,12 +251,12 @@ namespace Enderlook.GOAP
                             if (action.GetCostAndRequiredGoal(handle, out float actionCost, out TGoal requiredGoal))
                             {
                                 int newGoals = currentGoal.WithReplacement(builder, requiredGoal);
-                                ProcessGoalAndCheckForChainedSatisfaction(ref this, id, currentCost, actionIndex, ref newMemory, currentGoal, actionCost, ref newGoals);
+                                ProcessGoalAndCheckForChainedSatisfaction(ref this, id, currentCost, actionIndex, newMemory, actionCost, newGoals);
                             }
                             else
                             {
                                 if (currentGoal.WithPop(out int newGoals))
-                                    ProcessGoalAndCheckForChainedSatisfaction(ref this, id, currentCost, actionIndex, ref newMemory, currentGoal, actionCost, ref newGoals);
+                                    ProcessGoalAndCheckForChainedSatisfaction(ref this, id, currentCost, actionIndex, newMemory, actionCost, newGoals);
                                 else
                                     FoundValidPath(ref this, id, currentCost + actionCost, actionIndex, newMemory);
                             }
@@ -322,7 +322,7 @@ namespace Enderlook.GOAP
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             static void ProcessGoalAndCheckForChainedSatisfaction(
                 ref PlanBuilderIterator<TAgent, TWorldState, TGoal, TAction, TActionHandle, TWatchdog, TLog> self,
-                int id, float currentCost, int actionIndex, ref TWorldState newMemory, PlanBuilderState<TWorldState, TGoal, TAction>.GoalNode currentGoal, float actionCost, ref int newGoals)
+                int id, float currentCost, int actionIndex, TWorldState newMemory, float actionCost, int newGoals)
             {
                 Debug.Assert(self.builder is not null, "Is disposed.");
 
