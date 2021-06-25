@@ -19,11 +19,9 @@ namespace Enderlook.GOAP.Watchdogs
         public TimeOutWatchdog(int maximumMilliseconds)
         {
             if (maximumMilliseconds <= 0)
-                ThrowMustBeGreaterThanZero();
+                ThrowHelper.ThrowArgumentOutOfRangeException_MaximumMilisecondsMustBeGreaterThanZero();
 
             upTo = DateTime.Now.AddMilliseconds(maximumMilliseconds).Millisecond;
-
-            static void ThrowMustBeGreaterThanZero() => throw new ArgumentException("maximumMiliseconds", "Must be greater than 0.");
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

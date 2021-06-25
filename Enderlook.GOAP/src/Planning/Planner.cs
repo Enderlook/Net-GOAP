@@ -2,7 +2,6 @@
 using Enderlook.GOAP.Watchdogs;
 
 using System;
-using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 
@@ -13,9 +12,6 @@ namespace Enderlook.GOAP.Planning
     /// </summary>
     internal static class Planner
     {
-        [DoesNotReturn]
-        public static void ThrowInstanceIsDefault() => throw new ArgumentException("Instance is default.", "this");
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void RunAndDispose<TAgent, TWorldState, TGoal, TAction, TWatchdog>(TAgent agent, Plan<TGoal, TAction> plan, TWatchdog watchdog, Action<string>? log = null)
             where TAgent : IAgent<TWorldState, TGoal, TAction>

@@ -19,12 +19,10 @@ namespace Enderlook.GOAP.Watchdogs
         public TimeSliceWatchdog(int maximumMiliseconds)
         {
             if (maximumMiliseconds <= 0)
-                ThrowMustBeGreaterThanZero();
+                ThrowHelper.ThrowArgumentOutOfRangeException_MaximumMilisecondsMustBeGreaterThanZero();
 
             time = maximumMiliseconds;
             upTo = DateTime.Now.AddMilliseconds(maximumMiliseconds).Millisecond;
-
-            static void ThrowMustBeGreaterThanZero() => throw new ArgumentException("maximumMiliseconds", "Must be greater than 0.");
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

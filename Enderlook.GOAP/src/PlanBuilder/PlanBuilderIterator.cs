@@ -134,7 +134,7 @@ namespace Enderlook.GOAP
             {
                 if (Toggle.IsOn<TLog>())
                     builder.AppendAndLog("Error: world state is null.");
-                ThrowWorldStateIsNullException();
+                ThrowHelper.ThrowInvalidOperationException_WorldStateIsNull();
             }
 
             if (Toggle.IsOn<TLog>())
@@ -150,7 +150,7 @@ namespace Enderlook.GOAP
             {
                 if (Toggle.IsOn<TLog>())
                     builder.AppendAndLog("Error: goals is empty.");
-                ThrowGoalsIsEmptyException();
+                ThrowHelper.ThrowInvalidOperationException_GoalsIsEmpty();
             }
 
             agent.SetActions(ref this);
@@ -181,17 +181,8 @@ namespace Enderlook.GOAP
             {
                 if (Toggle.IsOn<TLog>())
                     builder.AppendAndLog("Error: actions is empty.");
-                ThrowActionsIsEmptyException();
+                ThrowHelper.ThrowInvalidOperationException_ActionsIsEmpty();
             }
-
-            [DoesNotReturn]
-            static void ThrowWorldStateIsNullException() => throw new InvalidOperationException("World state can't be null.");
-
-            [DoesNotReturn]
-            static void ThrowActionsIsEmptyException() => throw new InvalidOperationException("Must have at least one action.");
-
-            [DoesNotReturn]
-            static void ThrowGoalsIsEmptyException() => throw new InvalidOperationException("Must have at least one goal.");
         }
 
         public void Finalize_()
@@ -215,7 +206,7 @@ namespace Enderlook.GOAP
                 case WatchdogResult.Suspend:
                     return PlanningCoroutineResult.Suspended;
                 default:
-                    ThrowInvalidWatchdogResultException();
+                    ThrowHelper.ThrowInvalidOperationException_WatchdogResultIsInvalid();
                     break;
             }
 
@@ -239,6 +230,7 @@ namespace Enderlook.GOAP
                         builder.AppendToLog(" -> ");
                     }
 
+                    Debug.Assert(currentMemory is not null);
                     action.Visit(ref this, currentMemory);
                 }
 
@@ -252,9 +244,6 @@ namespace Enderlook.GOAP
             }
 
             return PlanningCoroutineResult.Finalized;
-
-            [DoesNotReturn]
-            static void ThrowInvalidWatchdogResultException() => throw new InvalidOperationException($"Returned value is not a valid value of {nameof(WatchdogResult)}.");
         }
 
         internal void AddAction(TAction action)
@@ -262,12 +251,9 @@ namespace Enderlook.GOAP
             Debug.Assert(builder is not null, "Is disposed.");
 
             if (action is null)
-                ThrowActionIsNullException();
+                ThrowHelper.ThrowInvalidOperationException_ActionIsNull();
 
             builder.AddAction<TLog>(action);
-
-            [DoesNotReturn]
-            static void ThrowActionIsNullException() => throw new InvalidOperationException("Action can't be null.");
         }
 
         internal void AddGoal(TGoal goal)
@@ -277,7 +263,7 @@ namespace Enderlook.GOAP
             TWorldState memory = agent.GetWorldState();
 
             if (goal is null)
-                ThrowGoalIsNullException();
+                ThrowHelper.ThrowInvalidOperationException_GoalIsNull();
 
             TWorldState newMemory;
             if (typeof(IWorldStatePool<TWorldState>).IsAssignableFrom(typeof(TAgent)))
@@ -286,9 +272,6 @@ namespace Enderlook.GOAP
                 newMemory = memory.Clone();
 
             builder.EnqueueGoal<TLog>(goal, newMemory);
-
-            [DoesNotReturn]
-            static void ThrowGoalIsNullException() => throw new InvalidOperationException("Goal can't be null.");
         }
 
         void IActionHandleAcceptor<TWorldState, TGoal>.Accept<TActionHandle>(TActionHandle action)
@@ -366,7 +349,7 @@ namespace Enderlook.GOAP
                 }
                 default:
                 {
-                    ThrowInvalidSatisfactionResultException();
+                    ThrowHelper.ThrowInvalidOperationException_SatisfactionResultIsInvalid();
                     break;
                 }
             }
@@ -437,9 +420,6 @@ namespace Enderlook.GOAP
                     ((IWorldStatePool<TWorldState>)self.agent).Return(newMemory2);
                 self.builder.Enqueue<TLog>(id, actionIndex, currentCost + actionCost, newGoals, newMemory);
             }
-
-            [DoesNotReturn]
-            static void ThrowInvalidSatisfactionResultException() => throw new InvalidOperationException($"Returned value is not a valid value of {nameof(SatisfactionResult)}.");
         }
     }
 }

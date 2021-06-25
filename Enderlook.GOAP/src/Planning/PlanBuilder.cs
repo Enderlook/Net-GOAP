@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 
 namespace Enderlook.GOAP.Planning
@@ -24,25 +23,16 @@ namespace Enderlook.GOAP.Planning
         internal PlanBuilder(Plan<TGoal, TAction> plan, TWorldState worldState, TActions actions, Action<string>? log)
         {
             if (plan is null)
-                ThrowNullPlanException();
+                ThrowHelper.ThrowArgumentNullException_Plan();
             if (worldState is null)
-                ThrowNullWorldStateException();
+                ThrowHelper.ThrowArgumentNullException_WorldState();
             if (actions is null)
-                ThrowNullActionsException();
+                ThrowHelper.ThrowArgumentNullException_Actions();
 
             this.plan = plan;
             this.worldState = worldState;
             this.actions = actions;
             this.log = log;
-
-            [DoesNotReturn]
-            static void ThrowNullActionsException() => throw new ArgumentNullException(nameof(actions));
-
-            [DoesNotReturn]
-            static void ThrowNullPlanException() => throw new ArgumentNullException(nameof(plan));
-
-            [DoesNotReturn]
-            static void ThrowNullWorldStateException() => throw new ArgumentNullException(nameof(worldState));
         }
 
         /// <summary>
@@ -57,7 +47,7 @@ namespace Enderlook.GOAP.Planning
         public PlanBuilderGoal<TWorldState, TGoal, SingleGoal<TGoal>, TAction, TActions> CompleteGoal(TGoal goal)
         {
             if (plan is null)
-                Planner.ThrowInstanceIsDefault();
+                ThrowHelper.ThrowArgumentException_InstanceIsDefault();
             return new(plan, worldState, actions, log, new(goal));
         }
 
@@ -73,7 +63,7 @@ namespace Enderlook.GOAP.Planning
         public PlanBuilderGoal<TWorldState, TGoal, CheapestGoal<TGoal>, TAction, TActions> CompleteCheapestGoalOf(IEnumerable<TGoal> goals)
         {
             if (plan is null)
-                Planner.ThrowInstanceIsDefault();
+                ThrowHelper.ThrowArgumentException_InstanceIsDefault();
             return new(plan, worldState, actions, log, new(goals));
         }
     }

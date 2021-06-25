@@ -17,12 +17,9 @@ namespace Enderlook.GOAP.Planning
         internal CheapestGoal(IEnumerable<TGoal> goals)
         {
             if (goals is null)
-                ThrowGoalsNullException();
+                ThrowHelper.ThrowArgumentNullException_Goals();
 
             Goals = goals;
-
-            [DoesNotReturn]
-            static void ThrowGoalsNullException() => throw new ArgumentNullException(nameof(goals));
         }
     }
 }

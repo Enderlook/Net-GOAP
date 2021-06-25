@@ -1,7 +1,6 @@
 ﻿using Enderlook.GOAP.Utilities;
 using Enderlook.GOAP.Watchdogs;
 
-using System;
 using System.Diagnostics;
 
 namespace Enderlook.GOAP
@@ -73,11 +72,11 @@ namespace Enderlook.GOAP
                         state = Continue;
                         return MoveNext();
                     case Disposed:
-                        ThrowAlreadyDisposedException();
+                        ThrowHelper.ThrowObjectDisposedException_Planning();
                         break;
                     case Finalized:
                     case Cancelled:
-                        ThrowAlreadyFinalizedException();
+                        ThrowHelper.ThrowInvalidOperationException_WatchdogResultIsInvalid();
                         break;
                     default:
                         Debug.Fail("Impossible state.");
@@ -85,10 +84,6 @@ namespace Enderlook.GOAP
                 }
                 return default;
             }
-
-            static void ThrowAlreadyDisposedException() => throw new ObjectDisposedException("Planning");
-
-            static void ThrowAlreadyFinalizedException() => throw new InvalidOperationException("Planification already finalized.");
         }
     }
 }

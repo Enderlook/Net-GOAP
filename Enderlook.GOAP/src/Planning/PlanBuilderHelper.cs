@@ -3,7 +3,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 
@@ -38,13 +37,13 @@ namespace Enderlook.GOAP.Planning
             Debug.Assert(watchdog is not null);
 
             if (helper is null)
-                ThrowNullHelperException();
+                ThrowHelper.ThrowArgumentNullException_Helper();
 
             Type helperType = typeof(THelper).IsValueType ? typeof(THelper) : helper.GetType();
             if (!typeof(IGoalPool<TGoal>).IsAssignableFrom(helperType) &&
                 !typeof(IWorldStatePool<TWorldState>).IsAssignableFrom(helperType) &&
                 !typeof(IGoalMerge<TGoal>).IsAssignableFrom(helperType))
-                ThrowTypeMistmachException();
+                ThrowHelper.ThrowArgumentException_HelperTypeMistmach();
 
             this.plan = plan;
             this.worldState = worldState;
@@ -53,8 +52,6 @@ namespace Enderlook.GOAP.Planning
             this.log = log;
             this.watchdog = watchdog;
             this.helper = helper;
-            [DoesNotReturn]
-            static void ThrowNullHelperException() => throw new ArgumentNullException(nameof(helper));
         }
 
         /// <inheritdoc cref="PlanBuilderGoal{TWorldState, TGoal, TGoals, TAction, TActions}.Execute"/>
@@ -62,7 +59,7 @@ namespace Enderlook.GOAP.Planning
         public Plan<TGoal, TAction> Execute()
         {
             if (plan is null)
-                Planner.ThrowInstanceIsDefault();
+                ThrowHelper.ThrowArgumentException_InstanceIsDefault();
             DebugAssert();
 
             Debug.Assert(helper is not null);
@@ -103,7 +100,7 @@ namespace Enderlook.GOAP.Planning
                 Planner.RunAndDispose<AgentWrapperMergeGoal<TWorldState, TGoal, TAction, TGoals, TActions, THelper>, TWorldState, TGoal, TAction, TWatchdog>(
                     new(worldState, goals, actions, helper), plan, watchdog, log);
             else
-                ThrowTypeMistmachException();
+                ThrowHelper.ThrowArgumentException_HelperTypeMistmach();
             return plan;
         }
 
@@ -112,7 +109,7 @@ namespace Enderlook.GOAP.Planning
         public ValueTask<Plan<TGoal, TAction>> ExecuteAsync()
         {
             if (plan is null)
-                Planner.ThrowInstanceIsDefault();
+                ThrowHelper.ThrowArgumentException_InstanceIsDefault();
             DebugAssert();
 
             Debug.Assert(helper is not null);
@@ -154,7 +151,7 @@ namespace Enderlook.GOAP.Planning
                     new(worldState, goals, actions, helper), plan, watchdog, log);
             else
             {
-                ThrowTypeMistmachException();
+                ThrowHelper.ThrowArgumentException_HelperTypeMistmach();
                 return default;
             }
         }
@@ -164,7 +161,7 @@ namespace Enderlook.GOAP.Planning
         public PlanningCoroutine<TGoal, TAction> ExecuteCoroutine()
         {
             if (plan is null)
-                Planner.ThrowInstanceIsDefault();
+                ThrowHelper.ThrowArgumentException_InstanceIsDefault();
             DebugAssert();
 
             Debug.Assert(helper is not null);
@@ -206,7 +203,7 @@ namespace Enderlook.GOAP.Planning
                     new(worldState, goals, actions, helper), plan, watchdog, log);
             else
             {
-                ThrowTypeMistmachException();
+                ThrowHelper.ThrowArgumentException_HelperTypeMistmach();
                 return default;
             }
         }
@@ -221,8 +218,5 @@ namespace Enderlook.GOAP.Planning
             Debug.Assert(watchdog is not null);
             Debug.Assert(helper is not null);
         }
-
-        [DoesNotReturn]
-        private static void ThrowTypeMistmachException() => throw new ArgumentException($"Must implement any of {nameof(IGoalPool<TGoal>)}, {nameof(IWorldStatePool<TWorldState>)}, {nameof(IGoalMerge<TGoal>)}.", nameof(helper));
     }
 }

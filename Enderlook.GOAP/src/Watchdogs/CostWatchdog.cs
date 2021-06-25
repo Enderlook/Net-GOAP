@@ -19,11 +19,9 @@ namespace Enderlook.GOAP.Watchdogs
         public CostWatchdog(float maximumCost)
         {
             if (maximumCost <= 0)
-                ThrowMustBeGreaterThanZero();
+                ThrowHelper.ThrowArgumentOutOfRangeException_CostMustBeGreaterThanZero();
 
             cost = maximumCost;
-
-            static void ThrowMustBeGreaterThanZero() => throw new ArgumentException("cost", "Must be greater than 0.");
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

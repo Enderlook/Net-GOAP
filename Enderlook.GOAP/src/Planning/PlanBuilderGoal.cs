@@ -55,7 +55,7 @@ namespace Enderlook.GOAP.Planning
         public PlanBuilderHelper<TWorldState, TGoal, TGoals, TAction, TActions, EndlessWatchdog, THelper> WithHelper<THelper>(THelper helper)
         {
             if (plan is null)
-                Planner.ThrowInstanceIsDefault();
+                ThrowHelper.ThrowArgumentException_InstanceIsDefault();
             DebugAssert();
 
             return new(plan, worldState, actions, goals, log, new(), helper);
@@ -75,7 +75,7 @@ namespace Enderlook.GOAP.Planning
             where TWatchdog : IWatchdog
         {
             if (plan is null)
-                Planner.ThrowInstanceIsDefault();
+                ThrowHelper.ThrowArgumentException_InstanceIsDefault();
             DebugAssert();
 
             return new(plan, worldState, actions, goals, log, watchdog);
@@ -126,7 +126,7 @@ namespace Enderlook.GOAP.Planning
         public Plan<TGoal, TAction> Execute()
         {
             if (plan is null)
-                Planner.ThrowInstanceIsDefault();
+                ThrowHelper.ThrowArgumentException_InstanceIsDefault();
             DebugAssert();
 
             Planner.RunAndDispose<AgentWrapper<TWorldState, TGoal, TAction, TGoals, TActions>, TWorldState, TGoal, TAction, EndlessWatchdog>(
@@ -144,7 +144,7 @@ namespace Enderlook.GOAP.Planning
         public ValueTask<Plan<TGoal, TAction>> ExecuteAsync()
         {
             if (plan is null)
-                Planner.ThrowInstanceIsDefault();
+                ThrowHelper.ThrowArgumentException_InstanceIsDefault();
             DebugAssert();
 
             return Planner.RunAndDisposeAsync<AgentWrapper<TWorldState, TGoal, TAction, TGoals, TActions>, TWorldState, TGoal, TAction, EndlessWatchdog>(
@@ -161,7 +161,7 @@ namespace Enderlook.GOAP.Planning
         public PlanningCoroutine<TGoal, TAction> ExecuteCoroutine()
         {
             if (plan is null)
-                Planner.ThrowInstanceIsDefault();
+                ThrowHelper.ThrowArgumentException_InstanceIsDefault();
             DebugAssert();
 
             return Planner.RunAndDisposeCoroutine<AgentWrapper<TWorldState, TGoal, TAction, TGoals, TActions>, TWorldState, TGoal, TAction, EndlessWatchdog>(

@@ -3,7 +3,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 
@@ -36,7 +35,7 @@ namespace Enderlook.GOAP.Planning
             Debug.Assert(goals is not null);
 
             if (watchdog is null)
-                ThrowNullWatchdogException();
+                ThrowHelper.ThrowArgumentNullException_Watchdog();
 
             this.plan = plan;
             this.worldState = worldState;
@@ -44,9 +43,6 @@ namespace Enderlook.GOAP.Planning
             this.goals = goals;
             this.log = log;
             this.watchdog = watchdog;
-
-            [DoesNotReturn]
-            static void ThrowNullWatchdogException() => throw new ArgumentNullException(nameof(watchdog));
         }
 
         /// <inheritdoc cref="PlanBuilderGoal{TWorldState, TGoal, TGoals, TAction, TActions}.WithHelper{THelper}(THelper)"/>
@@ -54,7 +50,7 @@ namespace Enderlook.GOAP.Planning
         public PlanBuilderHelper<TWorldState, TGoal, TGoals, TAction, TActions, TWatchdog, THelper> WithHelper<THelper>(THelper helper)
         {
             if (plan is null)
-                Planner.ThrowInstanceIsDefault();
+                ThrowHelper.ThrowArgumentException_InstanceIsDefault();
             DebugAssert();
             return new(plan, worldState, actions, goals, log, watchdog, helper);
         }
@@ -64,7 +60,7 @@ namespace Enderlook.GOAP.Planning
         public Plan<TGoal, TAction> Execute()
         {
             if (plan is null)
-                Planner.ThrowInstanceIsDefault();
+                ThrowHelper.ThrowArgumentException_InstanceIsDefault();
             DebugAssert();
 
             Planner.RunAndDispose<AgentWrapper<TWorldState, TGoal, TAction, TGoals, TActions>, TWorldState, TGoal, TAction, TWatchdog>(
@@ -77,7 +73,7 @@ namespace Enderlook.GOAP.Planning
         public async ValueTask<Plan<TGoal, TAction>> ExecuteAsync()
         {
             if (plan is null)
-                Planner.ThrowInstanceIsDefault();
+                ThrowHelper.ThrowArgumentException_InstanceIsDefault();
             DebugAssert();
 
             await Planner.RunAndDisposeAsync<AgentWrapper<TWorldState, TGoal, TAction, TGoals, TActions>, TWorldState, TGoal, TAction, TWatchdog>(
@@ -90,7 +86,7 @@ namespace Enderlook.GOAP.Planning
         public PlanningCoroutine<TGoal, TAction> ExecuteCoroutine()
         {
             if (plan is null)
-                Planner.ThrowInstanceIsDefault();
+                ThrowHelper.ThrowArgumentException_InstanceIsDefault();
             DebugAssert();
 
             return Planner.RunAndDisposeCoroutine<AgentWrapper<TWorldState, TGoal, TAction, TGoals, TActions>, TWorldState, TGoal, TAction, TWatchdog>(
