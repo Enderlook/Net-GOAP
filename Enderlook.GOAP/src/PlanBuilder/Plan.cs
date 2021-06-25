@@ -11,14 +11,15 @@ namespace Enderlook.GOAP
     /// </summary>
     /// <typeparam name="TGoal">Type of goals.</typeparam>
     /// <typeparam name="TAction">Type of actions.</typeparam>
-    public sealed class Plan<TGoal, TAction>
+    /// <typeparam name="TActionHandle">Type of action handle.</typeparam>
+    public sealed class Plan<TGoal, TAction, TActionHandle>
     {
         private PlanMode mode;
 
         private TGoal? goal;
         private int goalIndex;
         private float cost;
-        private RawList<int> plan = RawList<int>.Create();
+        private RawList<(int actionIndex, TActionHandle handle)> plan = RawList<(int actionIndex, TActionHandle handle)>.Create();
         private RawList<TAction> actions = RawList<TAction>.Create();
 
         /// <summary>
@@ -114,7 +115,7 @@ namespace Enderlook.GOAP
         {
             if (mode != PlanMode.FoundPlan)
                 HasNoPlan();
-            return plan[step];
+            return plan[step].actionIndex;
         }
 
         /// <summary>
@@ -129,7 +130,38 @@ namespace Enderlook.GOAP
         {
             if (mode != PlanMode.FoundPlan)
                 HasNoPlan();
-            return actions[plan[step]];
+            return actions[plan[step].actionIndex];
+        }
+
+        /// <summary>
+        /// Get the action handle of the action at index <paramref name="step"/>.
+        /// </summary>
+        /// <param name="step">Number of action from plan.</param>
+        /// <returns>Handle of the action.</returns>
+        /// <exception cref="InvalidOperationException">Thrown when there is no plan.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="step"/> is negative, equal or higher than <see cref="GetActionsCount"/>.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public TActionHandle GetActionHandle(int step)
+        {
+            if (mode != PlanMode.FoundPlan)
+                HasNoPlan();
+            return plan[step].handle;
+        }
+
+        /// <summary>
+        /// Get the action to execute at index <paramref name="step"/>.
+        /// </summary>
+        /// <param name="step">Number of action from plan.</param>
+        /// <returns>Action to execute.</returns>
+        /// <exception cref="InvalidOperationException">Thrown when there is no plan.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="step"/> is negative, equal or higher than <see cref="GetActionsCount"/>.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public (TAction Action, TActionHandle Handle) GetActionAndHandle(int step)
+        {
+            if (mode != PlanMode.FoundPlan)
+                HasNoPlan();
+            (int actionIndex, TActionHandle handle) tmp = plan[step];
+            return (actions[tmp.actionIndex], tmp.handle);
         }
 
         private void HasNoPlan() => throw new InvalidOperationException(mode switch
@@ -176,10 +208,10 @@ namespace Enderlook.GOAP
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal void AddActionToPlan(int action)
+        internal void AddActionToPlan(int actionIndex, TActionHandle handle)
         {
             Debug.Assert(mode == PlanMode.InProgress);
-            plan.Add(action);
+            plan.Add((actionIndex, handle));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

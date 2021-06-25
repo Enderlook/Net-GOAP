@@ -5,7 +5,8 @@
     /// </summary>
     /// <typeparam name="TGoal">Type of goal.</typeparam>
     /// <typeparam name="TAction">Type of action.</typeparam>
-    public abstract class PlanningCoroutine<TGoal, TAction> : PlanningCoroutine
+    /// <typeparam name="TActionHandle">Type of action handle.</typeparam>
+    public abstract class PlanningCoroutine<TGoal, TAction, TActionHandle> : PlanningCoroutine
     {
         private protected const byte Initialize = 0;
         private protected const byte Continue = 1;
@@ -19,6 +20,6 @@
         /// Get the associated plan with the coroutine.
         /// </summary>
         /// <returns>Asociated plan.</returns>
-        public abstract Plan<TGoal, TAction> GetAssociatedPlan();
+        public abstract Plan<TGoal, TAction, TActionHandle> GetAssociatedPlan();
     }
 }

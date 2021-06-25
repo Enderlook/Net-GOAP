@@ -20,7 +20,7 @@ namespace Enderlook.GOAP.Planning
         where TActions : IEnumerable<TAction>
         where TWatchdog : IWatchdog
     {
-        private readonly Plan<TGoal, TAction> plan;
+        private readonly Plan<TGoal, TAction, TActionHandle> plan;
         private readonly TWorldState worldState;
         private readonly TActions actions;
         private readonly TGoals goals;
@@ -29,7 +29,7 @@ namespace Enderlook.GOAP.Planning
         private readonly THelper helper;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal PlanBuilderHelper(Plan<TGoal, TAction> plan, TWorldState worldState, TActions actions, TGoals goals, Action<string>? log, TWatchdog watchdog, THelper helper)
+        internal PlanBuilderHelper(Plan<TGoal, TAction, TActionHandle> plan, TWorldState worldState, TActions actions, TGoals goals, Action<string>? log, TWatchdog watchdog, THelper helper)
         {
             Debug.Assert(plan is not null);
             Debug.Assert(worldState is not null);
@@ -59,7 +59,7 @@ namespace Enderlook.GOAP.Planning
 
         /// <inheritdoc cref="PlanBuilderGoal{TWorldState, TGoal, TGoals, TAction, TActionHandle, TActions}.Execute"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Plan<TGoal, TAction> Execute()
+        public Plan<TGoal, TAction, TActionHandle> Execute()
         {
             if (plan is null)
                 Planner.ThrowInstanceIsDefault();
@@ -155,7 +155,7 @@ namespace Enderlook.GOAP.Planning
 
         /// <inheritdoc cref="PlanBuilderGoal{TWorldState, TGoal, TGoals, TAction, TActionHandle, TActions}.ExecuteAsync"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ValueTask<Plan<TGoal, TAction>> ExecuteAsync()
+        public ValueTask<Plan<TGoal, TAction, TActionHandle>> ExecuteAsync()
         {
             if (plan is null)
                 Planner.ThrowInstanceIsDefault();
@@ -253,7 +253,7 @@ namespace Enderlook.GOAP.Planning
 
         /// <inheritdoc cref="PlanBuilderGoal{TWorldState, TGoal, TGoals, TAction, TActionHandle, TActions}.ExecuteCoroutine"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public PlanningCoroutine<TGoal, TAction> ExecuteCoroutine()
+        public PlanningCoroutine<TGoal, TAction, TActionHandle> ExecuteCoroutine()
         {
             if (plan is null)
                 Planner.ThrowInstanceIsDefault();

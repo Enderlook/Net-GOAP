@@ -15,13 +15,13 @@ namespace Enderlook.GOAP.Planning
         where TAction : IAction<TWorldState, TGoal, TActionHandle>
         where TActions : IEnumerable<TAction>
     {
-        private readonly Plan<TGoal, TAction> plan;
+        private readonly Plan<TGoal, TAction, TActionHandle> plan;
         private readonly TWorldState worldState;
         private readonly TActions actions;
         private readonly Action<string>? log;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal PlanBuilder(Plan<TGoal, TAction> plan, TWorldState worldState, TActions actions, Action<string>? log)
+        internal PlanBuilder(Plan<TGoal, TAction, TActionHandle> plan, TWorldState worldState, TActions actions, Action<string>? log)
         {
             if (plan is null)
                 ThrowNullPlanException();

@@ -2,13 +2,12 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Runtime.CompilerServices;
 
 namespace Enderlook.GOAP
 {
     /// <summary>
-    /// Extension methods for <see cref="Plan{TGoal, TAction}"/> used to fill the instance with a GOAP plan.<br/>
+    /// Extension methods for <see cref="Plan{TGoal, TAction, TActionHandle}"/> used to fill the instance with a GOAP plan.<br/>
     /// </summary>
     public static class PlanExtensions
     {
@@ -32,17 +31,17 @@ namespace Enderlook.GOAP
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="actions"/> is <see langword="null"/>.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static PlanBuilder<TWorldState, TGoal, TAction, TActionHandle, TActions> Plan<TWorldState, TGoal, TAction, TActionHandle, TActions>(
-            this Plan<TGoal, TAction> plan, TWorldState worldState, TActions actions, Action<string>? log = null)
+            this Plan<TGoal, TAction, TActionHandle> plan, TWorldState worldState, TActions actions, Action<string>? log = null)
             where TWorldState : IWorldState<TWorldState>
             where TGoal : IGoal<TWorldState>
             where TAction : IAction<TWorldState, TGoal, TActionHandle>
             where TActions : IEnumerable<TAction>
             => new(plan, worldState, actions, log);
 
-        /// <inheritdoc cref="Plan{TWorldState}(Plan{IGoal{TWorldState}, IAction{TWorldState, IGoal{TWorldState}, object}}, TWorldState, IEnumerable{IAction{TWorldState, IGoal{TWorldState}, object}}, Action{string}?)"/>
+        /// <inheritdoc cref="PlanExtensions.Plan{TWorldState}(Plan{IGoal{TWorldState}, IAction{TWorldState, IGoal{TWorldState}, object}, object}, TWorldState, IEnumerable{IAction{TWorldState, IGoal{TWorldState}, object}}, Action{string}?)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static PlanBuilder<TWorldState, IGoal<TWorldState>, IAction<TWorldState, IGoal<TWorldState>, object>, object, IEnumerable<IAction<TWorldState, IGoal<TWorldState>, object>>> Plan<TWorldState>(
-            this Plan<IGoal<TWorldState>,  IAction<TWorldState, IGoal<TWorldState>, object>> plan, TWorldState worldState, IEnumerable<IAction<TWorldState, IGoal<TWorldState>, object>> actions, Action<string>? log = null)
+            this Plan<IGoal<TWorldState>,  IAction<TWorldState, IGoal<TWorldState>, object>, object> plan, TWorldState worldState, IEnumerable<IAction<TWorldState, IGoal<TWorldState>, object>> actions, Action<string>? log = null)
             where TWorldState : IWorldState<TWorldState>
             => new(plan, worldState, actions, log);
     }

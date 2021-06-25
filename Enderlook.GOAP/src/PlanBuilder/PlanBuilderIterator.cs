@@ -18,12 +18,12 @@ namespace Enderlook.GOAP
         where TWatchdog : IWatchdog
     {
         private TAgent agent;
-        private PlanBuilderState<TWorldState, TGoal, TAction>? builder;
+        private PlanBuilderState<TWorldState, TGoal, TAction, TActionHandle>? builder;
         private TWatchdog watchdog;
-        public Plan<TGoal, TAction> Plan { get; }
+        public Plan<TGoal, TAction, TActionHandle> Plan { get; }
         private float lastCost;
 
-        private PlanBuilderIterator(TAgent agent, Plan<TGoal, TAction> plan, TWatchdog watchdog, Action<string>? log = null)
+        private PlanBuilderIterator(TAgent agent, Plan<TGoal, TAction, TActionHandle> plan, TWatchdog watchdog, Action<string>? log = null)
         {
             Debug.Assert(typeof(TAgent).IsValueType, $"{nameof(TAgent)} must be a value type to constant propagate type checks.");
             Toggle.Assert<TLog>();
@@ -39,7 +39,7 @@ namespace Enderlook.GOAP
             plan.SetInProgress();
 
             lastCost = 0;
-            builder = Pool<PlanBuilderState<TWorldState, TGoal, TAction>>.Get();
+            builder = Pool<PlanBuilderState<TWorldState, TGoal, TAction, TActionHandle>>.Get();
 
             if (Toggle.IsOn<TLog>())
             {
@@ -54,11 +54,11 @@ namespace Enderlook.GOAP
                 return;
 
             builder.Clear(agent);
-            Pool<PlanBuilderState<TWorldState, TGoal, TAction>>.Return(builder);
+            Pool<PlanBuilderState<TWorldState, TGoal, TAction, TActionHandle>>.Return(builder);
             builder = null;
         }
 
-        public static void RunAndDispose(TAgent agent, Plan<TGoal, TAction> plan, TWatchdog watchdog, Action<string>? log = null)
+        public static void RunAndDispose(TAgent agent, Plan<TGoal, TAction, TActionHandle> plan, TWatchdog watchdog, Action<string>? log = null)
         {
             using PlanBuilderIterator<TAgent, TWorldState, TGoal, TAction, TActionHandle, TWatchdog, TLog> iterator = new(agent, plan, watchdog, log);
             iterator.Initialize();
@@ -78,7 +78,7 @@ namespace Enderlook.GOAP
             iterator.Finalize_();
         }
 
-        public static async ValueTask<Plan<TGoal, TAction>> RunAndDisposeAsync(TAgent agent, Plan<TGoal, TAction> plan, TWatchdog watchdog, Action<string>? log = null)
+        public static async ValueTask<Plan<TGoal, TAction, TActionHandle>> RunAndDisposeAsync(TAgent agent, Plan<TGoal, TAction, TActionHandle> plan, TWatchdog watchdog, Action<string>? log = null)
         {
             using PlanBuilderIterator<TAgent, TWorldState, TGoal, TAction, TActionHandle, TWatchdog, TLog> iterator = new(agent, plan, watchdog, log);
             iterator.Initialize();
@@ -99,7 +99,7 @@ namespace Enderlook.GOAP
             return plan;
         }
 
-        public static PlanningCoroutine<TAgent, TWorldState, TGoal, TAction, TActionHandle, TWatchdog, TLog> RunAndDisposeCoroutine(TAgent agent, Plan<TGoal, TAction> plan, TWatchdog watchdog, Action<string>? log = null)
+        public static PlanningCoroutine<TAgent, TWorldState, TGoal, TAction, TActionHandle, TWatchdog, TLog> RunAndDisposeCoroutine(TAgent agent, Plan<TGoal, TAction, TActionHandle> plan, TWatchdog watchdog, Action<string>? log = null)
             => new(new(agent, plan, watchdog, log));
 
         public void Initialize()
@@ -180,7 +180,7 @@ namespace Enderlook.GOAP
 
         public PlanningCoroutineResult MoveNext()
         {
-            PlanBuilderState<TWorldState, TGoal, TAction>? builder = this.builder;
+            PlanBuilderState<TWorldState, TGoal, TAction, TActionHandle>? builder = this.builder;
             Debug.Assert(builder is not null, "Is disposed.");
 
             switch (watchdog.Poll(lastCost))
@@ -233,7 +233,7 @@ namespace Enderlook.GOAP
                     if (Toggle.IsOn<TLog>())
                         builder.AppendToLog(newMemory.ToString() ?? "<Null>");
 
-                    PlanBuilderState<TWorldState, TGoal, TAction>.GoalNode currentGoal = builder.GetGoal(currentGoalIndex);
+                    PlanBuilderState<TWorldState, TGoal, TAction, TActionHandle>.GoalNode currentGoal = builder.GetGoal(currentGoalIndex);
 
                     if (Toggle.IsOn<TLog>())
                     {
@@ -251,14 +251,14 @@ namespace Enderlook.GOAP
                             if (action.GetCostAndRequiredGoal(handle, out float actionCost, out TGoal requiredGoal))
                             {
                                 int newGoals = currentGoal.WithReplacement(builder, requiredGoal);
-                                ProcessGoalAndCheckForChainedSatisfaction(ref this, id, currentCost, actionIndex, newMemory, actionCost, newGoals);
+                                ProcessGoalAndCheckForChainedSatisfaction(ref this, id, currentCost, actionIndex, handle, newMemory, actionCost, newGoals);
                             }
                             else
                             {
                                 if (currentGoal.WithPop(out int newGoals))
-                                    ProcessGoalAndCheckForChainedSatisfaction(ref this, id, currentCost, actionIndex, newMemory, actionCost, newGoals);
+                                    ProcessGoalAndCheckForChainedSatisfaction(ref this, id, currentCost, actionIndex, handle, newMemory, actionCost, newGoals);
                                 else
-                                    FoundValidPath(ref this, id, currentCost + actionCost, actionIndex, newMemory);
+                                    FoundValidPath(ref this, id, currentCost + actionCost, actionIndex, handle, newMemory);
                             }
                             break;
                         }
@@ -269,11 +269,11 @@ namespace Enderlook.GOAP
 
                             if (action.GetCostAndRequiredGoal(handle, out float actionCost, out TGoal requiredGoal))
                             {
-                                int newGoals = PlanBuilderState<TWorldState, TGoal, TAction>.GoalNode.WithPush(builder, currentGoalIndex, requiredGoal);
-                                builder.Enqueue<TLog>(id, actionIndex, currentCost + actionCost, newGoals, newMemory);
+                                int newGoals = PlanBuilderState<TWorldState, TGoal, TAction, TActionHandle>.GoalNode.WithPush(builder, currentGoalIndex, requiredGoal);
+                                builder.Enqueue<TLog>(id, actionIndex, handle, currentCost + actionCost, newGoals, newMemory);
                             }
                             else
-                                builder.Enqueue<TLog>(id, actionIndex, currentCost + actionCost, currentGoalIndex, newMemory);
+                                builder.Enqueue<TLog>(id, actionIndex, handle, currentCost + actionCost, currentGoalIndex, newMemory);
                             break;
                         }
                         case SatisfactionResult.NotProgressed:
@@ -282,6 +282,8 @@ namespace Enderlook.GOAP
                                 builder.AppendAndLog(". Not progressed.");
                             if (typeof(IWorldStatePool<TWorldState>).IsAssignableFrom(typeof(TAgent)))
                                 ((IWorldStatePool<TWorldState>)agent).Return(newMemory);
+                            if (typeof(IActionHandlePool<TActionHandle>).IsAssignableFrom(typeof(TAgent)))
+                                ((IActionHandlePool<TActionHandle>)agent).Return(handle);
                             break;
                         }
                         default:
@@ -290,9 +292,6 @@ namespace Enderlook.GOAP
                             break;
                         }
                     }
-
-                    if (typeof(IActionHandlePool<TActionHandle>).IsAssignableFrom(typeof(TAgent)))
-                        ((IActionHandlePool<TActionHandle>)agent).Return(handle);
                 }
 
                 if (typeof(IWorldStatePool<TWorldState>).IsAssignableFrom(typeof(TAgent)))
@@ -305,12 +304,12 @@ namespace Enderlook.GOAP
 
             static void FoundValidPath(
                 ref PlanBuilderIterator<TAgent, TWorldState, TGoal, TAction, TActionHandle, TWatchdog, TLog> self,
-                int id, float cost, int action, TWorldState newMemory)
+                int id, float cost, int action, TActionHandle handle, TWorldState newMemory)
             {
                 Debug.Assert(self.builder is not null, "Is disposed.");
                 if (typeof(IWorldStatePool<TWorldState>).IsAssignableFrom(typeof(TAgent)))
                     ((IWorldStatePool<TWorldState>)self.agent).Return(newMemory);
-                self.builder.EnqueueValidPath<TLog>(id, action, cost);
+                self.builder.EnqueueValidPath<TLog>(id, action, handle, cost);
             }
 
             [DoesNotReturn]
@@ -322,7 +321,7 @@ namespace Enderlook.GOAP
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             static void ProcessGoalAndCheckForChainedSatisfaction(
                 ref PlanBuilderIterator<TAgent, TWorldState, TGoal, TAction, TActionHandle, TWatchdog, TLog> self,
-                int id, float currentCost, int actionIndex, TWorldState newMemory, float actionCost, int newGoals)
+                int id, float currentCost, int actionIndex, TActionHandle handle, TWorldState newMemory, float actionCost, int newGoals)
             {
                 Debug.Assert(self.builder is not null, "Is disposed.");
 
@@ -335,7 +334,7 @@ namespace Enderlook.GOAP
                 // This loop check if multiple goals were satisfied due the current action.
                 while (true)
                 {
-                    PlanBuilderState<TWorldState, TGoal, TAction>.GoalNode newGoal = self.builder.GetGoal(newGoals);
+                    PlanBuilderState<TWorldState, TGoal, TAction, TActionHandle>.GoalNode newGoal = self.builder.GetGoal(newGoals);
                     switch (newGoal.Goal.CheckAndTrySatisfy(newMemory, newMemory2))
                     {
                         case SatisfactionResult.Satisfied:
@@ -353,7 +352,7 @@ namespace Enderlook.GOAP
 
                             if (!newGoal.WithPop(out newGoals))
                             {
-                                FoundValidPath(ref self, id, currentCost, actionIndex, newMemory);
+                                FoundValidPath(ref self, id, currentCost, actionIndex, handle, newMemory);
                                 return;
                             }
 
@@ -373,7 +372,7 @@ namespace Enderlook.GOAP
                 stop:
                 if (typeof(IWorldStatePool<TWorldState>).IsAssignableFrom(typeof(TAgent)))
                     ((IWorldStatePool<TWorldState>)self.agent).Return(newMemory2);
-                self.builder.Enqueue<TLog>(id, actionIndex, currentCost + actionCost, newGoals, newMemory);
+                self.builder.Enqueue<TLog>(id, actionIndex, handle, currentCost + actionCost, newGoals, newMemory);
             }
         }
 

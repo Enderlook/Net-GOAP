@@ -19,14 +19,14 @@ namespace Enderlook.GOAP.Planning
         where TAction : IAction<TWorldState, TGoal, TActionHandle>
         where TActions : IEnumerable<TAction>
     {
-        private readonly Plan<TGoal, TAction> plan;
+        private readonly Plan<TGoal, TAction, TActionHandle> plan;
         private readonly TWorldState worldState;
         private readonly TActions actions;
         private readonly Action<string>? log;
         private readonly TGoals goals;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal PlanBuilderGoal(Plan<TGoal, TAction> plan, TWorldState worldState, TActions actions, Action<string>? log, TGoals goals)
+        internal PlanBuilderGoal(Plan<TGoal, TAction, TActionHandle> plan, TWorldState worldState, TActions actions, Action<string>? log, TGoals goals)
         {
             Debug.Assert(plan is not null);
             Debug.Assert(worldState is not null);
@@ -119,11 +119,11 @@ namespace Enderlook.GOAP.Planning
         /// <summary>
         /// Executes the planification synchronously.
         /// </summary>
-        /// <returns>Instance passed on <see cref="PlanExtensions.Plan{TWorldState, TGoal, TAction, TActionHandle, TActions}(Plan{TGoal, TAction}, TWorldState, TActions, Action{string}?)"/> method.</returns>
+        /// <returns>Instance passed on <see cref="PlanExtensions.Plan{TWorldState, TGoal, TAction, TActionHandle, TActions}(Plan{TGoal, TAction, TActionHandle}, TWorldState, TActions, Action{string}?)"/> method.</returns>
         /// <exception cref="ArgumentException">Thrown when instance is default.</exception>
         /// <remarks>If the planifiaction has a watchdog, all <see cref="WatchdogResult.Suspend"/> will be traduced as <see cref="Thread.Yield()"/>.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Plan<TGoal, TAction> Execute()
+        public Plan<TGoal, TAction, TActionHandle> Execute()
         {
             if (plan is null)
                 Planner.ThrowInstanceIsDefault();
@@ -137,11 +137,11 @@ namespace Enderlook.GOAP.Planning
         /// <summary>
         /// Executes the planification asynchronously.
         /// </summary>
-        /// <returns>Instance passed on <see cref="PlanExtensions.Plan{TWorldState, TGoal, TAction, TActionHandle, TActions}(Plan{TGoal, TAction}, TWorldState, TActions, Action{string}?)"/> method.</returns>
+        /// <returns>Instance passed on <see cref="PlanExtensions.Plan{TWorldState, TGoal, TAction, TActionHandle, TActions}(Plan{TGoal, TAction, TActionHandle}, TWorldState, TActions, Action{string}?)"/> method.</returns>
         /// <exception cref="ArgumentException">Thrown when instance is default.</exception>
         /// <remarks>If the planifiaction has a watchdog, all <see cref="WatchdogResult.Suspend"/> will be traduced as <see cref="Task.Yield()"/>.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ValueTask<Plan<TGoal, TAction>> ExecuteAsync()
+        public ValueTask<Plan<TGoal, TAction, TActionHandle>> ExecuteAsync()
         {
             if (plan is null)
                 Planner.ThrowInstanceIsDefault();
@@ -154,11 +154,11 @@ namespace Enderlook.GOAP.Planning
         /// <summary>
         /// Executes the planification asynchronously.
         /// </summary>
-        /// <returns>Instance passed on <see cref="PlanExtensions.Plan{TWorldState, TGoal, TAction, TActionHandle, TActions}(Plan{TGoal, TAction}, TWorldState, TActions, Action{string}?)"/> method.</returns>
+        /// <returns>Instance passed on <see cref="PlanExtensions.Plan{TWorldState, TGoal, TAction, TActionHandle, TActions}(Plan{TGoal, TAction, TActionHandle}, TWorldState, TActions, Action{string}?)"/> method.</returns>
         /// <exception cref="ArgumentException">Thrown when instance is default.</exception>
         /// <remarks>If the planifiaction has a watchdog, all <see cref="WatchdogResult.Suspend"/> will be traduced as an enumerator yield.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public PlanningCoroutine<TGoal, TAction> ExecuteCoroutine()
+        public PlanningCoroutine<TGoal, TAction, TActionHandle> ExecuteCoroutine()
         {
             if (plan is null)
                 Planner.ThrowInstanceIsDefault();

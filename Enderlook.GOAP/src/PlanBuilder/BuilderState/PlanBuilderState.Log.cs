@@ -4,7 +4,7 @@ using System.Runtime.CompilerServices;
 
 namespace Enderlook.GOAP
 {
-    internal sealed partial class PlanBuilderState<TWorldState, TGoal, TAction>
+    internal sealed partial class PlanBuilderState<TWorldState, TGoal, TAction, TActionHandle>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void AppendAndLog(string message)

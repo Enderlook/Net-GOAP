@@ -6,7 +6,7 @@ using System.Diagnostics;
 
 namespace Enderlook.GOAP
 {
-    internal class PlanningCoroutine<TAgent, TWorldState, TGoal, TAction, TActionHandle, TWatchdog, TLog> : PlanningCoroutine<TGoal, TAction>
+    internal class PlanningCoroutine<TAgent, TWorldState, TGoal, TAction, TActionHandle, TWatchdog, TLog> : PlanningCoroutine<TGoal, TAction, TActionHandle>
         where TAgent : IAgent<TWorldState, TGoal, TAction, TActionHandle>
         where TWorldState : IWorldState<TWorldState>
         where TGoal : IGoal<TWorldState>
@@ -27,7 +27,7 @@ namespace Enderlook.GOAP
             state = Disposed;
         }
 
-        public override Plan<TGoal, TAction> GetAssociatedPlan() => iterator.Plan;
+        public override Plan<TGoal, TAction, TActionHandle> GetAssociatedPlan() => iterator.Plan;
 
         public override bool MoveNext()
         {

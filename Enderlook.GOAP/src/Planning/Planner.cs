@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 namespace Enderlook.GOAP.Planning
 {
     /// <summary>
-    /// Extension methods for <see cref="Plan{TGoal, TAction}"/> used to fill the instance with a GOAP plan.<br/>
+    /// Extension methods for <see cref="Plan{TGoal, TAction, TActionHandle}"/> used to fill the instance with a GOAP plan.<br/>
     /// </summary>
     internal static class Planner
     {
@@ -17,7 +17,7 @@ namespace Enderlook.GOAP.Planning
         public static void ThrowInstanceIsDefault() => throw new ArgumentException("Instance is default.", "this");
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void RunAndDispose<TAgent, TWorldState, TGoal, TAction, TActionHandle, TWatchdog>(TAgent agent, Plan<TGoal, TAction> plan, TWatchdog watchdog, Action<string>? log = null)
+        public static void RunAndDispose<TAgent, TWorldState, TGoal, TAction, TActionHandle, TWatchdog>(TAgent agent, Plan<TGoal, TAction, TActionHandle> plan, TWatchdog watchdog, Action<string>? log = null)
             where TAgent : IAgent<TWorldState, TGoal, TAction, TActionHandle>
             where TWorldState : IWorldState<TWorldState>
             where TGoal : IGoal<TWorldState>
@@ -33,7 +33,7 @@ namespace Enderlook.GOAP.Planning
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static ValueTask<Plan<TGoal, TAction>> RunAndDisposeAsync<TAgent, TWorldState, TGoal, TAction, TActionHandle, TWatchdog>(TAgent agent, Plan<TGoal, TAction> plan, TWatchdog watchdog, Action<string>? log = null)
+        public static ValueTask<Plan<TGoal, TAction, TActionHandle>> RunAndDisposeAsync<TAgent, TWorldState, TGoal, TAction, TActionHandle, TWatchdog>(TAgent agent, Plan<TGoal, TAction, TActionHandle> plan, TWatchdog watchdog, Action<string>? log = null)
             where TAgent : IAgent<TWorldState, TGoal, TAction, TActionHandle>
             where TWorldState : IWorldState<TWorldState>
             where TGoal : IGoal<TWorldState>
@@ -49,7 +49,7 @@ namespace Enderlook.GOAP.Planning
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static PlanningCoroutine<TGoal, TAction> RunAndDisposeCoroutine<TAgent, TWorldState, TGoal, TAction, TActionHandle, TWatchdog>(TAgent agent, Plan<TGoal, TAction> plan, TWatchdog watchdog, Action<string>? log = null)
+        public static PlanningCoroutine<TGoal, TAction, TActionHandle> RunAndDisposeCoroutine<TAgent, TWorldState, TGoal, TAction, TActionHandle, TWatchdog>(TAgent agent, Plan<TGoal, TAction, TActionHandle> plan, TWatchdog watchdog, Action<string>? log = null)
             where TAgent : IAgent<TWorldState, TGoal, TAction, TActionHandle>
             where TWorldState : IWorldState<TWorldState>
             where TGoal : IGoal<TWorldState>
