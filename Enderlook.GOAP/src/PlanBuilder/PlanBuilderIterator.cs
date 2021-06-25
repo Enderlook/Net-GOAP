@@ -363,7 +363,7 @@ namespace Enderlook.GOAP
 
                             break;
                         }
-                        case SatisfactionResult.Progressed: // Actually, this case should never happen if use implemented the interface properly.
+                        case SatisfactionResult.Progressed: // Actually, this case should never happen if user implemented the interface properly.
                         case SatisfactionResult.NotProgressed:
                             goto stop;
                     }
