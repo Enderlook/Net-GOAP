@@ -1,8 +1,6 @@
 ﻿using Enderlook.Collections.LowLevel;
-using Enderlook.GOAP.Planning;
 
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
