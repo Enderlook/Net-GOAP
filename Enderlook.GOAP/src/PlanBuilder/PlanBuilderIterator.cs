@@ -24,7 +24,7 @@ namespace Enderlook.GOAP
         private float lastCost;
 
         // Fields used by IActionHandleAcceptor<TWorldState, TGoal>
-        private TWorldState? currentMemory;
+        private TWorldState? currentWorldState;
         private int currentGoalIndex;
         private int id;
         private float currentCost;
@@ -56,13 +56,13 @@ namespace Enderlook.GOAP
 
 #if NET5_0_OR_GREATER
 
-            Unsafe.SkipInit(out currentMemory);
+            Unsafe.SkipInit(out currentWorldState);
             Unsafe.SkipInit(out currentGoalIndex);
             Unsafe.SkipInit(out id);
             Unsafe.SkipInit(out currentCost);
             Unsafe.SkipInit(out actionIndex);
 #else
-            currentMemory = default;
+            currentWorldState = default;
             currentGoalIndex = default;
             id = default;
             currentCost = default;
@@ -210,9 +210,9 @@ namespace Enderlook.GOAP
                     break;
             }
 
-            if (builder.TryDequeue<TAgent, TLog>(out id, out currentCost, out currentGoalIndex, out currentMemory))
+            if (builder.TryDequeue<TAgent, TLog>(out id, out currentCost, out currentGoalIndex, out currentWorldState))
             {
-                Debug.Assert(currentMemory is not null);
+                Debug.Assert(currentWorldState is not null);
 
                 lastCost = currentCost;
 
@@ -225,19 +225,19 @@ namespace Enderlook.GOAP
                         builder.AppendToLog(" - Check with action: ");
                         builder.AppendToLog(builder.GetActionText(actionIndex));
                         builder.AppendToLog(" ");
-                        Debug.Assert(currentMemory is not null);
-                        builder.AppendToLog(currentMemory.ToString() ?? "<Null>");
+                        Debug.Assert(currentWorldState is not null);
+                        builder.AppendToLog(currentWorldState.ToString() ?? "<Null>");
                         builder.AppendToLog(" -> ");
                     }
 
-                    Debug.Assert(currentMemory is not null);
-                    action.Visit(ref this, currentMemory);
+                    Debug.Assert(currentWorldState is not null);
+                    action.Visit(ref this, currentWorldState);
                 }
 
                 if (typeof(IWorldStatePool<TWorldState>).IsAssignableFrom(typeof(TAgent)))
                 {
-                    Debug.Assert(currentMemory is not null);
-                    ((IWorldStatePool<TWorldState>)agent).Return(currentMemory);
+                    Debug.Assert(currentWorldState is not null);
+                    ((IWorldStatePool<TWorldState>)agent).Return(currentWorldState);
                 }
 
                 return PlanningCoroutineResult.Continue;
@@ -277,7 +277,7 @@ namespace Enderlook.GOAP
         void IActionHandleAcceptor<TWorldState, TGoal>.Accept<TActionHandle>(TActionHandle action)
         {
             Debug.Assert(builder is not null, "Is disposed.");
-            Debug.Assert(currentMemory is not null);
+            Debug.Assert(currentWorldState is not null);
 
             if (!action.CheckProceduralPreconditions())
             {
@@ -286,15 +286,15 @@ namespace Enderlook.GOAP
                 return;
             }
 
-            TWorldState newMemory;
+            TWorldState newWorldState;
             if (typeof(IWorldStatePool<TWorldState>).IsAssignableFrom(typeof(TAgent)))
-                newMemory = ((IWorldStatePool<TWorldState>)agent).Clone(currentMemory);
+                newWorldState = ((IWorldStatePool<TWorldState>)agent).Clone(currentWorldState);
             else
-                newMemory = currentMemory.Clone();
-            action.ApplyEffect(newMemory);
+                newWorldState = currentWorldState.Clone();
+            action.ApplyEffect(newWorldState);
 
             if (Toggle.IsOn<TLog>())
-                builder.AppendToLog(newMemory.ToString() ?? "<Null>");
+                builder.AppendToLog(newWorldState.ToString() ?? "<Null>");
 
             PlanBuilderState<TWorldState, TGoal, TAction>.GoalNode currentGoal = builder.GetGoal(currentGoalIndex);
 
@@ -304,7 +304,7 @@ namespace Enderlook.GOAP
                 builder.AppendToLog(currentGoal.Goal.ToString() ?? "<Null>");
             }
 
-            switch (currentGoal.Goal.CheckAndTrySatisfy(currentMemory, newMemory))
+            switch (currentGoal.Goal.CheckAndTrySatisfy(currentWorldState, newWorldState))
             {
                 case SatisfactionResult.Satisfied:
                 {
@@ -314,14 +314,14 @@ namespace Enderlook.GOAP
                     if (action.GetCostAndRequiredGoal(out float actionCost, out TGoal requiredGoal))
                     {
                         int newGoals = currentGoal.WithReplacement(builder, requiredGoal);
-                        ProcessGoalAndCheckForChainedSatisfaction(ref this, id, currentCost, actionIndex, newMemory, actionCost, newGoals);
+                        ProcessGoalAndCheckForChainedSatisfaction(ref this, id, currentCost, actionIndex, newWorldState, actionCost, newGoals);
                     }
                     else
                     {
                         if (currentGoal.WithPop(out int newGoals))
-                            ProcessGoalAndCheckForChainedSatisfaction(ref this, id, currentCost, actionIndex, newMemory, actionCost, newGoals);
+                            ProcessGoalAndCheckForChainedSatisfaction(ref this, id, currentCost, actionIndex, newWorldState, actionCost, newGoals);
                         else
-                            FoundValidPath(ref this, id, currentCost + actionCost, actionIndex, newMemory);
+                            FoundValidPath(ref this, id, currentCost + actionCost, actionIndex, newWorldState);
                     }
                     break;
                 }
@@ -333,10 +333,10 @@ namespace Enderlook.GOAP
                     if (action.GetCostAndRequiredGoal(out float actionCost, out TGoal requiredGoal))
                     {
                         int newGoals = PlanBuilderState<TWorldState, TGoal, TAction>.GoalNode.WithPush(builder, currentGoalIndex, requiredGoal);
-                        builder.Enqueue<TLog>(id, actionIndex, currentCost + actionCost, newGoals, newMemory);
+                        builder.Enqueue<TLog>(id, actionIndex, currentCost + actionCost, newGoals, newWorldState);
                     }
                     else
-                        builder.Enqueue<TLog>(id, actionIndex, currentCost + actionCost, currentGoalIndex, newMemory);
+                        builder.Enqueue<TLog>(id, actionIndex, currentCost + actionCost, currentGoalIndex, newWorldState);
                     break;
                 }
                 case SatisfactionResult.NotProgressed:
@@ -344,7 +344,7 @@ namespace Enderlook.GOAP
                     if (Toggle.IsOn<TLog>())
                         builder.AppendAndLog(". Not progressed.");
                     if (typeof(IWorldStatePool<TWorldState>).IsAssignableFrom(typeof(TAgent)))
-                        ((IWorldStatePool<TWorldState>)agent).Return(newMemory);
+                        ((IWorldStatePool<TWorldState>)agent).Return(newWorldState);
                     break;
                 }
                 default:
@@ -367,21 +367,21 @@ namespace Enderlook.GOAP
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             static void ProcessGoalAndCheckForChainedSatisfaction(
                 ref PlanBuilderIterator<TAgent, TWorldState, TGoal, TAction, TWatchdog, TLog> self,
-                int id, float currentCost, int actionIndex, TWorldState newMemory, float actionCost, int newGoals)
+                int id, float currentCost, int actionIndex, TWorldState newWorldState, float actionCost, int newGoals)
             {
                 Debug.Assert(self.builder is not null, "Is disposed.");
 
-                TWorldState newMemory2;
+                TWorldState newWorldState2;
                 if (typeof(IWorldStatePool<TWorldState>).IsAssignableFrom(typeof(TAgent)))
-                    newMemory2 = ((IWorldStatePool<TWorldState>)self.agent).Clone(newMemory);
+                    newWorldState2 = ((IWorldStatePool<TWorldState>)self.agent).Clone(newWorldState);
                 else
-                    newMemory2 = newMemory.Clone();
+                    newWorldState2 = newWorldState.Clone();
 
                 // This loop check if multiple goals were satisfied due the current action.
                 while (true)
                 {
                     PlanBuilderState<TWorldState, TGoal, TAction>.GoalNode newGoal = self.builder.GetGoal(newGoals);
-                    switch (newGoal.Goal.CheckAndTrySatisfy(newMemory, newMemory2))
+                    switch (newGoal.Goal.CheckAndTrySatisfy(newWorldState, newWorldState2))
                     {
                         case SatisfactionResult.Satisfied:
                         {
@@ -393,19 +393,19 @@ namespace Enderlook.GOAP
                             }
 
                             if (typeof(IWorldStatePool<TWorldState>).IsAssignableFrom(typeof(TAgent)))
-                                ((IWorldStatePool<TWorldState>)self.agent).Return(newMemory);
-                            newMemory = newMemory2;
+                                ((IWorldStatePool<TWorldState>)self.agent).Return(newWorldState);
+                            newWorldState = newWorldState2;
 
                             if (!newGoal.WithPop(out newGoals))
                             {
-                                FoundValidPath(ref self, id, currentCost, actionIndex, newMemory);
+                                FoundValidPath(ref self, id, currentCost, actionIndex, newWorldState);
                                 return;
                             }
 
                             if (typeof(IWorldStatePool<TWorldState>).IsAssignableFrom(typeof(TAgent)))
-                                newMemory2 = ((IWorldStatePool<TWorldState>)self.agent).Clone(newMemory);
+                                newWorldState2 = ((IWorldStatePool<TWorldState>)self.agent).Clone(newWorldState);
                             else
-                                newMemory2 = newMemory.Clone();
+                                newWorldState2 = newWorldState.Clone();
 
                             break;
                         }
@@ -417,8 +417,8 @@ namespace Enderlook.GOAP
 
                 stop:
                 if (typeof(IWorldStatePool<TWorldState>).IsAssignableFrom(typeof(TAgent)))
-                    ((IWorldStatePool<TWorldState>)self.agent).Return(newMemory2);
-                self.builder.Enqueue<TLog>(id, actionIndex, currentCost + actionCost, newGoals, newMemory);
+                    ((IWorldStatePool<TWorldState>)self.agent).Return(newWorldState2);
+                self.builder.Enqueue<TLog>(id, actionIndex, currentCost + actionCost, newGoals, newWorldState);
             }
         }
     }
