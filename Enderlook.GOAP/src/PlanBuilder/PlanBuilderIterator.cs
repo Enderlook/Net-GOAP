@@ -310,18 +310,21 @@ namespace Enderlook.GOAP
                     if (Toggle.IsOn<TLog>())
                         builder.AppendToLog("\n   Satisfied:\n    - ");
 
+                    int goalIndex;
                     if (action.GetCostAndRequiredGoal(out float actionCost, out TGoal requiredGoal))
                     {
-                        int newGoals = currentGoal.WithReplacement(builder, requiredGoal);
-                        ProcessGoalAndCheckForChainedSatisfaction(ref this, id, currentCost, actionIndex, newWorldState, actionCost, newGoals);
+                        goalIndex = currentGoal.WithReplacement(builder, requiredGoal);
+                        goto process;
                     }
-                    else
-                    {
-                        if (currentGoal.WithPop(out int newGoals))
-                            ProcessGoalAndCheckForChainedSatisfaction(ref this, id, currentCost, actionIndex, newWorldState, actionCost, newGoals);
-                        else
-                            FoundValidPath(ref this, id, currentCost + actionCost, actionIndex, newWorldState);
-                    }
+
+                    if (currentGoal.WithPop(out goalIndex))
+                        goto process;
+
+                    FoundValidPath(ref this, id, currentCost + actionCost, actionIndex, newWorldState);
+                    break;
+
+                    process:
+                    ProcessGoalAndCheckForChainedSatisfaction(ref this, id, currentCost, actionIndex, newWorldState, actionCost, goalIndex);
                     break;
                 }
                 case SatisfactionResult.Progressed:
@@ -330,33 +333,7 @@ namespace Enderlook.GOAP
                         builder.AppendToLog("\n   Progressed:\n    - ");
 
                     if (action.GetCostAndRequiredGoal(out float actionCost, out TGoal requiredGoal))
-                    {
-                        switch (requiredGoal.CheckAndTrySatisfy(newWorldState, ref newWorldState))
-                        {
-                            case SatisfactionResult.Satisfied:
-                            {
-                                if (Toggle.IsOn<TLog>())
-                                {
-                                    builder.AppendToLog("The goal ");
-                                    builder.AppendToLog(requiredGoal.ToString() ?? "<Null>");
-                                    builder.AppendToLog(" was also satisfied with the executed action.\n    - ");
-                                }
-
-                                builder.Enqueue<TLog>(id, actionIndex, currentCost + actionCost, currentGoalIndex, newWorldState);
-                                break;
-                            }
-                            case SatisfactionResult.Progressed: // Actually, this case should never happen if user implemented the interface properly.
-                            case SatisfactionResult.NotProgressed:
-                            {
-                                int newGoals = PlanBuilderState<TWorldState, TGoal, TAction>.GoalNode.WithPush(builder, currentGoalIndex, requiredGoal);
-                                builder.Enqueue<TLog>(id, actionIndex, currentCost + actionCost, newGoals, newWorldState);
-                                break;
-                            }
-                            default:
-                                ThrowHelper.ThrowInvalidOperationException_SatisfactionResultIsInvalid();
-                                break;
-                        }
-                    }
+                        ProcessGoalAndCheckForSatisfaction(ref this, newWorldState, actionCost, requiredGoal);
                     else
                         builder.Enqueue<TLog>(id, actionIndex, currentCost + actionCost, currentGoalIndex, newWorldState);
                     break;
@@ -446,6 +423,39 @@ namespace Enderlook.GOAP
                 if (typeof(IWorldStatePool<TWorldState>).IsAssignableFrom(typeof(TAgent)))
                     ((IWorldStatePool<TWorldState>)self.agent).Return(newWorldState2);
                 self.builder.Enqueue<TLog>(id, actionIndex, currentCost + actionCost, newGoals, newWorldState);
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            static void ProcessGoalAndCheckForSatisfaction(
+                ref PlanBuilderIterator<TAgent, TWorldState, TGoal, TAction, TWatchdog, TLog> self,
+                TWorldState newWorldState, float actionCost, TGoal requiredGoal)
+            {
+                Debug.Assert(self.builder is not null, "Is disposed.");
+                switch (requiredGoal.CheckAndTrySatisfy(newWorldState, ref newWorldState))
+                {
+                    case SatisfactionResult.Satisfied:
+                    {
+                        if (Toggle.IsOn<TLog>())
+                        {
+                            self.builder.AppendToLog("The goal ");
+                            self.builder.AppendToLog(requiredGoal.ToString() ?? "<Null>");
+                            self.builder.AppendToLog(" was also satisfied with the executed action.\n    - ");
+                        }
+
+                        self.builder.Enqueue<TLog>(self.id, self.actionIndex, self.currentCost + actionCost, self.currentGoalIndex, newWorldState);
+                        break;
+                    }
+                    case SatisfactionResult.Progressed: // Actually, this case should never happen if user implemented the interface properly.
+                    case SatisfactionResult.NotProgressed:
+                    {
+                        int newGoals = PlanBuilderState<TWorldState, TGoal, TAction>.GoalNode.WithPush(self.builder, self.currentGoalIndex, requiredGoal);
+                        self.builder.Enqueue<TLog>(self.id, self.actionIndex, self.currentCost + actionCost, newGoals, newWorldState);
+                        break;
+                    }
+                    default:
+                        ThrowHelper.ThrowInvalidOperationException_SatisfactionResultIsInvalid();
+                        break;
+                }
             }
         }
     }
