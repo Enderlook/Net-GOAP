@@ -3,7 +3,6 @@ using Enderlook.GOAP.Watchdogs;
 
 using System;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -139,7 +138,7 @@ namespace Enderlook.GOAP
 
             if (Toggle.IsOn<TLog>())
             {
-                builder.AppendToLog("Start planning.\nInitial memory: ");
+                builder.AppendToLog("Start planning.\nInitial world state: ");
                 builder.AppendAndLog(memory.ToString() ?? "<Null>");
             }
 
@@ -222,12 +221,12 @@ namespace Enderlook.GOAP
 
                     if (Toggle.IsOn<TLog>())
                     {
-                        builder.AppendToLog(" - Check with action: ");
+                        builder.AppendToLog(" - Check action: ");
                         builder.AppendToLog(builder.GetActionText(actionIndex));
-                        builder.AppendToLog(" ");
+                        builder.AppendToLog("\n   Using world state: ");
                         Debug.Assert(currentWorldState is not null);
                         builder.AppendToLog(currentWorldState.ToString() ?? "<Null>");
-                        builder.AppendToLog(" -> ");
+                        builder.AppendToLog("\n   Which is mutated into: ");
                     }
 
                     Debug.Assert(currentWorldState is not null);
@@ -300,7 +299,7 @@ namespace Enderlook.GOAP
 
             if (Toggle.IsOn<TLog>())
             {
-                builder.AppendToLog(". And goal: ");
+                builder.AppendToLog("\n   Having as goal: ");
                 builder.AppendToLog(currentGoal.Goal.ToString() ?? "<Null>");
             }
 
@@ -309,7 +308,7 @@ namespace Enderlook.GOAP
                 case SatisfactionResult.Satisfied:
                 {
                     if (Toggle.IsOn<TLog>())
-                        builder.AppendToLog(". Satisfied.\n   ");
+                        builder.AppendToLog("\n   Satisfied:\n    - ");
 
                     if (action.GetCostAndRequiredGoal(out float actionCost, out TGoal requiredGoal))
                     {
@@ -328,7 +327,7 @@ namespace Enderlook.GOAP
                 case SatisfactionResult.Progressed:
                 {
                     if (Toggle.IsOn<TLog>())
-                        builder.AppendToLog(". Progressed.\n   ");
+                        builder.AppendToLog("\n   Progressed:\n    - ");
 
                     if (action.GetCostAndRequiredGoal(out float actionCost, out TGoal requiredGoal))
                     {
@@ -342,13 +341,15 @@ namespace Enderlook.GOAP
                 case SatisfactionResult.NotProgressed:
                 {
                     if (Toggle.IsOn<TLog>())
-                        builder.AppendAndLog(". Not progressed.");
+                        builder.AppendAndLog("\n   Not progressed.");
                     if (typeof(IWorldStatePool<TWorldState>).IsAssignableFrom(typeof(TAgent)))
                         ((IWorldStatePool<TWorldState>)agent).Return(newWorldState);
                     break;
                 }
                 default:
                 {
+                    if (Toggle.IsOn<TLog>())
+                        builder.AppendAndLog($"\n   Error: Invalid value of {nameof(SatisfactionResult)}.");
                     ThrowHelper.ThrowInvalidOperationException_SatisfactionResultIsInvalid();
                     break;
                 }
@@ -389,7 +390,7 @@ namespace Enderlook.GOAP
                             {
                                 self.builder.AppendToLog("The goal ");
                                 self.builder.AppendToLog(newGoal.Goal.ToString() ?? "<Null>");
-                                self.builder.AppendToLog(" was also satisfied with the executed action.\n   ");
+                                self.builder.AppendToLog(" was also satisfied with the executed action.\n    - ");
                             }
 
                             if (typeof(IWorldStatePool<TWorldState>).IsAssignableFrom(typeof(TAgent)))

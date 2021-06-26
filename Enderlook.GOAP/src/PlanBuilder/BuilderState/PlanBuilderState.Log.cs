@@ -27,7 +27,7 @@ namespace Enderlook.GOAP
             {
                 id = node.Parent;
                 node = nodes[id];
-                builder.Append(" -> ").Append(nodesText[id]);
+                builder.Append("\n <- ").Append(nodesText[id]);
             }
             builder.Append('.');
         }

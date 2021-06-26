@@ -73,6 +73,7 @@ namespace Enderlook.GOAP
             Debug.Assert(typeof(TAgent).IsValueType, $"{nameof(TAgent)} must be a value type to constant propagate type checks.");
             Debug.Assert(plan is not null);
 
+            builder.Append("Finalized planning.\n");
             if ((state & State.Cancelled) != 0)
             {
                 if (Toggle.IsOn<TLog>())
@@ -89,7 +90,7 @@ namespace Enderlook.GOAP
             {
                 if (Toggle.IsOn<TLog>())
                 {
-                    builder.Append("Cancelled: ");
+                    builder.Append("Not found: ");
                     builder.Append("\nTotal actions enqueued: ").Append(nodes.Count).Append('.');
                     builder.Append("\nTotal goals stored: ").Append(goals.Count).Append('.');
                     builder.Append("\nRemaining nodes to visit: ").Append(toVisit.Count).Append('.');
@@ -99,7 +100,7 @@ namespace Enderlook.GOAP
 
             if (Toggle.IsOn<TLog>())
             {
-                builder.Append("Finalized: ");
+                builder.Append("Found:\n    ");
                 AppendToLogNode(endNode);
                 builder.Append("\nTotal cost of plan ").Append(cost).Append('.');
                 builder.Append("\nTotal actions enqueued: ").Append(nodes.Count).Append('.');
@@ -126,7 +127,7 @@ namespace Enderlook.GOAP
 
             if (Toggle.IsOn<TLog>())
             {
-                builder.Append("\nLength of plan ").Append(plan.PlanCountInternal()).Append('.');
+                builder.Append("\nLength of plan: ").Append(plan.PlanCountInternal()).Append('.');
                 Log();
             }
 
