@@ -114,7 +114,7 @@ namespace Enderlook.GOAP
         {
             if (mode != PlanMode.FoundPlan)
                 HasNoPlan();
-            return plan[step];
+            return plan[plan.Count - 1 - step];
         }
 
         /// <summary>
@@ -129,7 +129,7 @@ namespace Enderlook.GOAP
         {
             if (mode != PlanMode.FoundPlan)
                 HasNoPlan();
-            return actions[plan[step]];
+            return actions[plan[plan.Count - 1 - step]];
         }
 
         private void HasNoPlan() => throw new InvalidOperationException(mode switch
