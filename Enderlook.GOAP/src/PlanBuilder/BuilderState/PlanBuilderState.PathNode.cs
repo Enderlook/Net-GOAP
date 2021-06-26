@@ -85,6 +85,7 @@ namespace Enderlook.GOAP
                     builder.Append(node.Goal.ToString());
                     while (node.Previous != -1)
                     {
+                        builder.Append(", ");
                         node = goals[node.Previous];
                         builder.Append(node.Goal.ToString());
                     }
