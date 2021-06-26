@@ -14,9 +14,9 @@
         /// This method must call <see cref="IActionHandleAcceptor{TWorldState, TGoal}.Accept{TActionHandle}(TActionHandle)"/>.
         /// </summary>
         /// <typeparam name="TActionHandleAcceptor">Type of the action hadnle acceptor.</typeparam>
-        /// <param name="aceptor">Processor of the action.</param>
+        /// <param name="acceptor">Processor of the action.</param>
         /// <param name="worldState">State of the world, this can be used to later calculate dynamic costs and goals in the action handle.</param>
-        void Visit<TActionHandleAcceptor>(ref TActionHandleAcceptor aceptor, TWorldState worldState)
+        void Visit<TActionHandleAcceptor>(ref TActionHandleAcceptor acceptor, TWorldState worldState)
             where TActionHandleAcceptor : IActionHandleAcceptor<TWorldState, TGoal>;
     }
 }
