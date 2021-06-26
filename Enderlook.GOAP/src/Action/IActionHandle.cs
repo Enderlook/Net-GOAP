@@ -14,7 +14,11 @@
         /// Not confuse with the preconditions of <see cref="GetCostAndRequiredGoal(out float, out TGoal)"/>, this ones are not actually tied to the world state.
         /// </summary>
         /// <returns><see langword="true"/> if procedural preconditions are satisfied.</returns>
-        bool CheckProceduralPreconditions();
+        bool CheckProceduralPreconditions()
+#if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+            => true
+#endif
+            ;
 
         /// <summary>
         /// Get the cost of execution this action and the preconditions required to execute this action.<br/>

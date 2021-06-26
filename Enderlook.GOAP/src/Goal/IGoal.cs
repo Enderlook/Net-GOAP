@@ -20,6 +20,10 @@
         /// </summary>
         /// <param name="worldState">Memory to check if it can satify the goal.</param>
         /// <returns><see langword="true"/> if the goal was satisfied.</returns>
-        bool CheckAndTrySatisfy(ref TWorldState worldState);
+        bool CheckAndTrySatisfy(ref TWorldState worldState)
+#if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+            => CheckAndTrySatisfy(worldState, ref worldState) == SatisfactionResult.Satisfied
+#endif
+            ;
     }
 }
