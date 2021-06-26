@@ -331,8 +331,31 @@ namespace Enderlook.GOAP
 
                     if (action.GetCostAndRequiredGoal(out float actionCost, out TGoal requiredGoal))
                     {
-                        int newGoals = PlanBuilderState<TWorldState, TGoal, TAction>.GoalNode.WithPush(builder, currentGoalIndex, requiredGoal);
-                        builder.Enqueue<TLog>(id, actionIndex, currentCost + actionCost, newGoals, newWorldState);
+                        switch (requiredGoal.CheckAndTrySatisfy(newWorldState, ref newWorldState))
+                        {
+                            case SatisfactionResult.Satisfied:
+                            {
+                                if (Toggle.IsOn<TLog>())
+                                {
+                                    builder.AppendToLog("The goal ");
+                                    builder.AppendToLog(requiredGoal.ToString() ?? "<Null>");
+                                    builder.AppendToLog(" was also satisfied with the executed action.\n    - ");
+                                }
+
+                                builder.Enqueue<TLog>(id, actionIndex, currentCost + actionCost, currentGoalIndex, newWorldState);
+                                break;
+                            }
+                            case SatisfactionResult.Progressed: // Actually, this case should never happen if user implemented the interface properly.
+                            case SatisfactionResult.NotProgressed:
+                            {
+                                int newGoals = PlanBuilderState<TWorldState, TGoal, TAction>.GoalNode.WithPush(builder, currentGoalIndex, requiredGoal);
+                                builder.Enqueue<TLog>(id, actionIndex, currentCost + actionCost, newGoals, newWorldState);
+                                break;
+                            }
+                            default:
+                                ThrowHelper.ThrowInvalidOperationException_SatisfactionResultIsInvalid();
+                                break;
+                        }
                     }
                     else
                         builder.Enqueue<TLog>(id, actionIndex, currentCost + actionCost, currentGoalIndex, newWorldState);
