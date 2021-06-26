@@ -49,7 +49,7 @@ namespace Enderlook.GOAP
         /// Get the cost of the plan.
         /// </summary>
         /// <returns>Cost of the plan.</returns>
-        /// <exception cref="InvalidOperationException">Thrown when there is no plan.</exception>
+        /// <exception cref="InvalidOperationException">Thrown when there is no plan (either plan was canceled, not found, or the instance was never used to formulate a plan).</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public float GetPlanCost()
         {
@@ -62,7 +62,7 @@ namespace Enderlook.GOAP
         /// Get the goal that the plan will archive.
         /// </summary>
         /// <returns>Goal to archive.</returns>
-        /// <exception cref="InvalidOperationException">Thrown when there is no plan.</exception>
+        /// <exception cref="InvalidOperationException">Thrown when there is no plan (either plan was canceled, not found, or the instance was never used to formulate a plan).</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public TGoal GetGoal()
         {
@@ -77,7 +77,7 @@ namespace Enderlook.GOAP
         /// Get the goal index that the plan will archive.
         /// </summary>
         /// <returns>Goal to archive. The index represent the element from passed enumeration.</returns>
-        /// <exception cref="InvalidOperationException">Thrown when there is no plan.</exception>
+        /// <exception cref="InvalidOperationException">Thrown when there is no plan (either plan was canceled, not found, or the instance was never used to formulate a plan).</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int GetGoalIndex()
         {
@@ -89,12 +89,12 @@ namespace Enderlook.GOAP
         }
 
         /// <summary>
-        /// Get the amount of actions required by this plan.
+        /// Get the amount of steps required by this plan.
         /// </summary>
-        /// <returns>Amount of actions required by the plan.</returns>
-        /// <exception cref="InvalidOperationException">Thrown when there is no plan.</exception>
+        /// <returns>Amount of steps required by the plan.</returns>
+        /// <exception cref="InvalidOperationException">Thrown when there is no plan (either plan was canceled, not found, or the instance was never used to formulate a plan).</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public int GetActionsCount()
+        public int GetStepsCount()
         {
             if (mode != PlanMode.FoundPlan)
                 HasNoPlan();
@@ -103,12 +103,26 @@ namespace Enderlook.GOAP
         }
 
         /// <summary>
+        /// Get the amount of actions that were available during the formulation of this plan.
+        /// </summary>
+        /// <returns>Amount of actions avaiable during the formulation of this plan.</returns>
+        /// <exception cref="InvalidOperationException">Thrown when there is no plan (either plan was canceled, not found, or the instance was never used to formulate a plan).</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int GetActionsCount()
+        {
+            if (mode != PlanMode.FoundPlan)
+                HasNoPlan();
+
+            return actions.Count;
+        }
+
+        /// <summary>
         /// Get the index of the action to execute at index <paramref name="step"/>.
         /// </summary>
         /// <param name="step">Number of action from plan.</param>
         /// <returns>Index of the action to execute. The index correspond to elements from the passed enumeration.</returns>
-        /// <exception cref="InvalidOperationException">Thrown when there is no plan.</exception>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="step"/> is negative, equal or higher than <see cref="GetActionsCount"/>.</exception>
+        /// <exception cref="InvalidOperationException">Thrown when there is no plan (either plan was canceled, not found, or the instance was never used to formulate a plan).</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="step"/> is negative, equal or higher than <see cref="GetStepsCount"/>.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int GetActionIndex(int step)
         {
@@ -118,12 +132,27 @@ namespace Enderlook.GOAP
         }
 
         /// <summary>
-        /// Get the action to execute at index <paramref name="step"/>.
+        /// Get the action associated with the specified index.
+        /// </summary>
+        /// <param name="index">Index of the associated action.</param>
+        /// <returns>The actio associated with that index.</returns>
+        /// <exception cref="InvalidOperationException">Thrown when there is no plan (either plan was canceled, not found, or the instance was never used to formulate a plan).</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="index"/> is negative, equal or higher than <see cref="GetStepsCount"/>.</exception>
+        public TAction GetActionAtIndex(int index)
+        {
+            if (mode != PlanMode.FoundPlan)
+                HasNoPlan();
+            return actions[index];
+        }
+
+        /// <summary>
+        /// Get the action to execute at index <paramref name="step"/>.<br/>
+        /// This is faster than manually calling both <see cref="GetActionIndex(int)"/> and <see cref="GetActionAtIndex(int)"/>.
         /// </summary>
         /// <param name="step">Number of action from plan.</param>
         /// <returns>Action to execute.</returns>
-        /// <exception cref="InvalidOperationException">Thrown when there is no plan.</exception>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="step"/> is negative, equal or higher than <see cref="GetActionsCount"/>.</exception>
+        /// <exception cref="InvalidOperationException">Thrown when there is no plan (either plan was canceled, not found, or the instance was never used to formulate a plan).</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="step"/> is negative, equal or higher than <see cref="GetStepsCount"/>.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public TAction GetAction(int step)
         {
