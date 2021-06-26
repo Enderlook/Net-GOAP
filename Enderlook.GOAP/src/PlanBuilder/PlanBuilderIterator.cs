@@ -372,57 +372,39 @@ namespace Enderlook.GOAP
             {
                 Debug.Assert(self.builder is not null, "Is disposed.");
 
-                TWorldState newWorldState2;
-                if (typeof(IWorldStatePool<TWorldState>).IsAssignableFrom(typeof(TAgent)))
-                    newWorldState2 = ((IWorldStatePool<TWorldState>)self.agent).Clone(newWorldState);
+                PlanBuilderState<TWorldState, TGoal, TAction>.GoalNode newGoal = self.builder.GetGoal(newGoals);
+                if (newGoal.Goal.CheckAndTrySatisfy(ref newWorldState))
+                    WasSatisfied(ref self, id, currentCost, actionIndex, ref newWorldState, actionCost, out newGoals, ref newGoal);
                 else
-                    newWorldState2 = newWorldState.Clone();
+                    self.builder.Enqueue<TLog>(id, actionIndex, currentCost + actionCost, newGoals, newWorldState);
 
-                // This loop check if multiple goals were satisfied due the current action.
-                while (true)
+                static void WasSatisfied(
+                    ref PlanBuilderIterator<TAgent, TWorldState, TGoal, TAction, TWatchdog, TLog> self,
+                    int id, float currentCost, int actionIndex, ref TWorldState newWorldState, float actionCost,
+                    out int newGoals, ref PlanBuilderState<TWorldState, TGoal, TAction>.GoalNode newGoal)
                 {
-                    PlanBuilderState<TWorldState, TGoal, TAction>.GoalNode newGoal = self.builder.GetGoal(newGoals);
-                    switch (newGoal.Goal.CheckAndTrySatisfy(newWorldState, ref newWorldState2))
+                    Debug.Assert(self.builder is not null, "Is disposed.");
+
+                    do
                     {
-                        case SatisfactionResult.Satisfied:
+                        if (Toggle.IsOn<TLog>())
                         {
-                            if (Toggle.IsOn<TLog>())
-                            {
-                                self.builder.AppendToLog("The goal ");
-                                self.builder.AppendToLog(newGoal.Goal.ToString() ?? "<Null>");
-                                self.builder.AppendToLog(" was also satisfied with the executed action.\n    - ");
-                            }
-
-                            if (typeof(IWorldStatePool<TWorldState>).IsAssignableFrom(typeof(TAgent)))
-                                ((IWorldStatePool<TWorldState>)self.agent).Return(newWorldState);
-                            newWorldState = newWorldState2;
-
-                            if (!newGoal.WithPop(out newGoals))
-                            {
-                                FoundValidPath(ref self, id, currentCost, actionIndex, newWorldState);
-                                return;
-                            }
-
-                            if (typeof(IWorldStatePool<TWorldState>).IsAssignableFrom(typeof(TAgent)))
-                                newWorldState2 = ((IWorldStatePool<TWorldState>)self.agent).Clone(newWorldState);
-                            else
-                                newWorldState2 = newWorldState.Clone();
-
-                            break;
+                            self.builder.AppendToLog("The goal ");
+                            self.builder.AppendToLog(newGoal.Goal.ToString() ?? "<Null>");
+                            self.builder.AppendToLog(" was also satisfied with the executed action.\n    - ");
                         }
-                        case SatisfactionResult.Progressed: // Actually, this case should never happen if user implemented the interface properly.
-                        case SatisfactionResult.NotProgressed:
-                            goto stop;
-                        default:
-                            ThrowHelper.ThrowInvalidOperationException_SatisfactionResultIsInvalid();
-                            break;
-                    }
-                }
 
-                stop:
-                if (typeof(IWorldStatePool<TWorldState>).IsAssignableFrom(typeof(TAgent)))
-                    ((IWorldStatePool<TWorldState>)self.agent).Return(newWorldState2);
-                self.builder.Enqueue<TLog>(id, actionIndex, currentCost + actionCost, newGoals, newWorldState);
+                        if (!newGoal.WithPop(out newGoals))
+                        {
+                            FoundValidPath(ref self, id, currentCost, actionIndex, newWorldState);
+                            return;
+                        }
+
+                        newGoal = self.builder.GetGoal(newGoals);
+                    } while (newGoal.Goal.CheckAndTrySatisfy(ref newWorldState));
+
+                    self.builder.Enqueue<TLog>(id, actionIndex, currentCost + actionCost, newGoals, newWorldState);
+                }
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -431,30 +413,21 @@ namespace Enderlook.GOAP
                 TWorldState newWorldState, float actionCost, TGoal requiredGoal)
             {
                 Debug.Assert(self.builder is not null, "Is disposed.");
-                switch (requiredGoal.CheckAndTrySatisfy(newWorldState, ref newWorldState))
+                if (requiredGoal.CheckAndTrySatisfy(ref newWorldState))
                 {
-                    case SatisfactionResult.Satisfied:
+                    if (Toggle.IsOn<TLog>())
                     {
-                        if (Toggle.IsOn<TLog>())
-                        {
-                            self.builder.AppendToLog("The goal ");
-                            self.builder.AppendToLog(requiredGoal.ToString() ?? "<Null>");
-                            self.builder.AppendToLog(" was also satisfied with the executed action.\n    - ");
-                        }
+                        self.builder.AppendToLog("The goal ");
+                        self.builder.AppendToLog(requiredGoal.ToString() ?? "<Null>");
+                        self.builder.AppendToLog(" was also satisfied with the executed action.\n    - ");
+                    }
 
-                        self.builder.Enqueue<TLog>(self.id, self.actionIndex, self.currentCost + actionCost, self.currentGoalIndex, newWorldState);
-                        break;
-                    }
-                    case SatisfactionResult.Progressed: // Actually, this case should never happen if user implemented the interface properly.
-                    case SatisfactionResult.NotProgressed:
-                    {
-                        int newGoals = PlanBuilderState<TWorldState, TGoal, TAction>.GoalNode.WithPush(self.builder, self.currentGoalIndex, requiredGoal);
-                        self.builder.Enqueue<TLog>(self.id, self.actionIndex, self.currentCost + actionCost, newGoals, newWorldState);
-                        break;
-                    }
-                    default:
-                        ThrowHelper.ThrowInvalidOperationException_SatisfactionResultIsInvalid();
-                        break;
+                    self.builder.Enqueue<TLog>(self.id, self.actionIndex, self.currentCost + actionCost, self.currentGoalIndex, newWorldState);
+                }
+                else
+                {
+                    int newGoals = PlanBuilderState<TWorldState, TGoal, TAction>.GoalNode.WithPush(self.builder, self.currentGoalIndex, requiredGoal);
+                    self.builder.Enqueue<TLog>(self.id, self.actionIndex, self.currentCost + actionCost, newGoals, newWorldState);
                 }
             }
         }

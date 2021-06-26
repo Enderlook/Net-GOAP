@@ -14,5 +14,12 @@
         /// <param name="now">Memory to check if it can satify the goal.</param>
         /// <returns>How satisfaction of this goal has progressed.</returns>
         SatisfactionResult CheckAndTrySatisfy(TWorldState before, ref TWorldState now);
+
+        /// <summary>
+        /// Check if the goal can be satisfied by <paramref name="worldState"/>. If <see langword="true"/>, satisfy it (e.g: mutate the memory to consume the state).<br/>
+        /// </summary>
+        /// <param name="worldState">Memory to check if it can satify the goal.</param>
+        /// <returns><see langword="true"/> if the goal was satisfied.</returns>
+        bool CheckAndTrySatisfy(ref TWorldState worldState);
     }
 }
