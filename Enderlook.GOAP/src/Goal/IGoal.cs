@@ -13,6 +13,6 @@
         /// <param name="before">Previous memory state to compare progress towards satisfaction.</param>
         /// <param name="now">Memory to check if it can satify the goal.</param>
         /// <returns>How satisfaction of this goal has progressed.</returns>
-        SatisfactionResult CheckAndTrySatisfy(TWorldState before, TWorldState now);
+        SatisfactionResult CheckAndTrySatisfy(TWorldState before, ref TWorldState now);
     }
 }

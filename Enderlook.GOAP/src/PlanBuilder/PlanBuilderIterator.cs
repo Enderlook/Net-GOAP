@@ -291,7 +291,7 @@ namespace Enderlook.GOAP
                 newWorldState = ((IWorldStatePool<TWorldState>)agent).Clone(currentWorldState);
             else
                 newWorldState = currentWorldState.Clone();
-            action.ApplyEffect(newWorldState);
+            action.ApplyEffect(ref newWorldState);
 
             if (Toggle.IsOn<TLog>())
                 builder.AppendToLog(newWorldState.ToString() ?? "<Null>");
@@ -304,7 +304,7 @@ namespace Enderlook.GOAP
                 builder.AppendToLog(currentGoal.Goal.ToString() ?? "<Null>");
             }
 
-            switch (currentGoal.Goal.CheckAndTrySatisfy(currentWorldState, newWorldState))
+            switch (currentGoal.Goal.CheckAndTrySatisfy(currentWorldState, ref newWorldState))
             {
                 case SatisfactionResult.Satisfied:
                 {
@@ -381,7 +381,7 @@ namespace Enderlook.GOAP
                 while (true)
                 {
                     PlanBuilderState<TWorldState, TGoal, TAction>.GoalNode newGoal = self.builder.GetGoal(newGoals);
-                    switch (newGoal.Goal.CheckAndTrySatisfy(newWorldState, newWorldState2))
+                    switch (newGoal.Goal.CheckAndTrySatisfy(newWorldState, ref newWorldState2))
                     {
                         case SatisfactionResult.Satisfied:
                         {

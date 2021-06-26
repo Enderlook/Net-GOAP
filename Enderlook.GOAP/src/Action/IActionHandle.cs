@@ -29,6 +29,6 @@
         /// Note that this method must not consume the required preconditions, if any.
         /// </summary>
         /// <param name="worldState">World state where effects are being applied.</param>
-        void ApplyEffect(TWorldState worldState);
+        void ApplyEffect(ref TWorldState worldState);
     }
 }
