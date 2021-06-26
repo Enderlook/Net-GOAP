@@ -413,6 +413,9 @@ namespace Enderlook.GOAP
                         case SatisfactionResult.Progressed: // Actually, this case should never happen if user implemented the interface properly.
                         case SatisfactionResult.NotProgressed:
                             goto stop;
+                        default:
+                            ThrowHelper.ThrowInvalidOperationException_SatisfactionResultIsInvalid();
+                            break;
                     }
                 }
 
