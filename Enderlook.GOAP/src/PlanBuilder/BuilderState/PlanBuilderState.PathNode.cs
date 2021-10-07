@@ -74,6 +74,7 @@ namespace Enderlook.GOAP
                     .Append("(I:").Append(id)
                     .Append(" P:").Append(Parent)
                     .Append(" T:").Append(Mode.ToString())
+                    .Append(" C:").Append(cost)
                     .Append(" A:").Append(Action == -1 ? "<>" : planBuilder.actionsText[Action])
                     .Append(" M:").Append(World?.ToString() ?? "<>")
                     .Append(" G:");
