@@ -17,7 +17,8 @@ namespace Enderlook.GOAP
 
             if (Toggle.IsOn<TLog>())
             {
-                nodesText.Add(node.ToLogText(this, count));
+                nodesText.Add(node.ToLogText(this, count, cost));
+                Debug.Assert(builder is not null);
                 builder.Append(nodesText[count]);
                 Log();
             }
@@ -27,7 +28,11 @@ namespace Enderlook.GOAP
         public void EnqueueGoal<TLog>(TGoal goal, TWorldState world)
         {
             if (Toggle.IsOn<TLog>())
+            {
+                Debug.Assert(builder is not null);
                 builder.Append("Enqueue Goal: ");
+            }
+
             Enqueue<TLog>(new(GoalNode.Create(this, goal), world), 0);
         }
 
@@ -35,7 +40,11 @@ namespace Enderlook.GOAP
         public void EnqueueValidPath<TLog>(int parent, int action, float cost)
         {
             if (Toggle.IsOn<TLog>())
+            {
+                Debug.Assert(builder is not null);
                 builder.Append("Enqueue Valid Path: ");
+            }
+
             endNode = nodes.Count;
             this.cost = cost;
             state |= State.Found;
@@ -46,7 +55,11 @@ namespace Enderlook.GOAP
         public void Enqueue<TLog>(int parent, int action, float cost, int goals, TWorldState world)
         {
             if (Toggle.IsOn<TLog>())
+            {
+                Debug.Assert(builder is not null);
                 builder.Append("Enqueue: ");
+            }
+
             Enqueue<TLog>(new(parent, action, goals, world), cost);
         }
 
@@ -54,7 +67,11 @@ namespace Enderlook.GOAP
         public void Enqueue<TLog>(int parent, int action, float cost, TGoal goal, TWorldState world)
         {
             if (Toggle.IsOn<TLog>())
+            {
+                Debug.Assert(builder is not null);
                 builder.Append("Enqueue: ");
+            }
+
             Enqueue<TLog>(new(parent, action, GoalNode.Create(this, goal), world), cost);
         }
 
@@ -69,6 +86,7 @@ namespace Enderlook.GOAP
 
                 if (Toggle.IsOn<TLog>())
                 {
+                    Debug.Assert(builder is not null);
                     builder.Append("Dequeue Success: ");
                     builder.Append(nodesText[id]);
                     Log();

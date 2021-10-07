@@ -1,6 +1,7 @@
 ﻿using Enderlook.Collections.LowLevel;
 
 using System;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
 
@@ -64,9 +65,10 @@ namespace Enderlook.GOAP
                     World = default;
             }
 
-            public string ToLogText(PlanBuilderState<TWorldState, TGoal, TAction> planBuilder, int id)
+            public string ToLogText(PlanBuilderState<TWorldState, TGoal, TAction> planBuilder, int id, float cost)
             {
-                StringBuilder builder = planBuilder.builder;
+                StringBuilder? builder = planBuilder.builder;
+                Debug.Assert(builder is not null);
                 int initialLength = builder.Length;
                 builder
                     .Append("(I:").Append(id)

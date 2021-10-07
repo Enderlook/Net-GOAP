@@ -9,18 +9,28 @@ namespace Enderlook.GOAP
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void AppendAndLog(string message)
         {
+            Debug.Assert(builder is not null);
             builder.Append(message);
             Log();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void AppendToLog(string message) => builder.Append(message);
+        public void AppendToLog(string message)
+        {
+            Debug.Assert(builder is not null);
+            builder.Append(message);
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void AppendToLog(int number) => builder.Append(number);
+        public void AppendToLog(int number)
+        {
+            Debug.Assert(builder is not null);
+            builder.Append(number);
+        }
 
         private void AppendToLogNode(int id)
         {
+            Debug.Assert(builder is not null);
             builder.Append(nodesText[id]);
             PathNode node = nodes[id];
             while (node.Mode != PathNode.Type.Start)
@@ -36,6 +46,7 @@ namespace Enderlook.GOAP
         public void Log()
         {
             Debug.Assert(log is not null);
+            Debug.Assert(builder is not null);
             log(builder.ToString());
             builder.Clear();
         }
@@ -43,6 +54,8 @@ namespace Enderlook.GOAP
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void SetLog(Action<string> log)
         {
+            if (builder is null)
+                builder = new();
             Debug.Assert(log is not null);
             this.log = log;
         }
