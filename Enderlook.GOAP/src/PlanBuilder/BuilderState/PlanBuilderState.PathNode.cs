@@ -71,13 +71,19 @@ namespace Enderlook.GOAP
                 Debug.Assert(builder is not null);
                 int initialLength = builder.Length;
                 builder
-                    .Append("(I:").Append(id)
-                    .Append(" P:").Append(Parent)
-                    .Append(" T:").Append(Mode.ToString())
-                    .Append(" C:").Append(cost)
-                    .Append(" A:").Append(Action == -1 ? "<>" : planBuilder.actionsText[Action])
-                    .Append(" M:").Append(World?.ToString() ?? "<>")
-                    .Append(" G:");
+                    .Append("(Id:").Append(id)
+                    .Append(" Parent-Id:");
+                if (Parent == -1)
+                    builder.Append("N/A");
+                else
+                    builder.Append(Parent);
+                if (Mode == Type.End)
+                    builder.Append(" Leaf");
+                builder
+                    .Append(" Total-Cost:").Append(cost)
+                    .Append(" Current-Action:").Append(Action == -1 ? "<>" : planBuilder.actionsText[Action])
+                    .Append(" World-State:").Append(World?.ToString() ?? "<>")
+                    .Append(" Remainig-Goals:");
                 if (Mode == Type.End)
                     builder.Append("<>");
                 else

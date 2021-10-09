@@ -223,10 +223,10 @@ namespace Enderlook.GOAP
                     {
                         builder.AppendToLog(" - Check action: ");
                         builder.AppendToLog(builder.GetActionText(actionIndex));
-                        builder.AppendToLog("\n   Using world state: ");
+                        builder.AppendToLog("\n   Which mutates world state from ");
                         Debug.Assert(currentWorldState is not null);
                         builder.AppendToLog(currentWorldState.ToString() ?? "<Null>");
-                        builder.AppendToLog("\n   Which is mutated into: ");
+                        builder.AppendToLog(" to ");
                     }
 
                     Debug.Assert(currentWorldState is not null);
