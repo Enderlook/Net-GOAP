@@ -15,6 +15,14 @@ namespace Enderlook.GOAP
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void AppendAndLog(char character)
+        {
+            Debug.Assert(builder is not null);
+            builder.Append(character);
+            Log();
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void AppendToLog(string message)
         {
             Debug.Assert(builder is not null);
@@ -26,6 +34,13 @@ namespace Enderlook.GOAP
         {
             Debug.Assert(builder is not null);
             builder.Append(number);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void AppendToLog(char c)
+        {
+            Debug.Assert(builder is not null);
+            builder.Append(c);
         }
 
         private void AppendToLogNode(int id)

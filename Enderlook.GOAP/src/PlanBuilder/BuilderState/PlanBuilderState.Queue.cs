@@ -20,6 +20,7 @@ namespace Enderlook.GOAP
                 nodesText.Add(node.ToLogText(this, count, cost));
                 Debug.Assert(builder is not null);
                 builder.Append(nodesText[count]);
+                builder.Append('.');
                 Log();
             }
         }
@@ -89,6 +90,7 @@ namespace Enderlook.GOAP
                     Debug.Assert(builder is not null);
                     builder.Append("Dequeue Success: ");
                     builder.Append(nodesText[id]);
+                    builder.Append('.');
                     Log();
                 }
 

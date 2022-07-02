@@ -70,35 +70,45 @@ namespace Enderlook.GOAP
                 StringBuilder? builder = planBuilder.builder;
                 Debug.Assert(builder is not null);
                 int initialLength = builder.Length;
-                builder
-                    .Append("(Id:").Append(id)
-                    .Append(" Parent-Id:");
-                if (Parent == -1)
-                    builder.Append("N/A");
+
+                builder.Append("(Id:").Append(id);
+                if (Mode == Type.Start)
+                {
+                    Debug.Assert(Parent == -1);
+                    builder.Append(" Root");
+                }
                 else
-                    builder.Append(Parent);
-                if (Mode == Type.End)
-                    builder.Append(" Leaf");
+                {
+                    builder.Append(" Parent-Id:").Append(Parent);
+                    if (Mode == Type.End)
+                        builder.Append(" Leaf");
+                }
                 builder
                     .Append(" Total-Cost:").Append(cost)
-                    .Append(" Current-Action:").Append(Action == -1 ? "<>" : planBuilder.actionsText[Action])
-                    .Append(" World-State:").Append(World?.ToString() ?? "<>")
-                    .Append(" Remainig-Goals:");
+                    .Append(" Current-Action:<");
+                if (Action != -1)
+                    builder.Append(planBuilder.actionsText[Action]);
+                builder
+                    .Append("> World-State:<")
+                    .Append(World?.ToString() ?? "Null")
+                    .Append("> Remaining-Goals:");
                 if (Mode == Type.End)
-                    builder.Append("<>");
+                    builder.Append("[]");
                 else
                 {
                     builder.Append('[');
                     RawList<GoalNode> goals = planBuilder.goals;
                     GoalNode node = goals[Goals];
-                    builder.Append(node.Goal.ToString());
+                    builder
+                        .Append('<')
+                        .Append(node.Goal.ToString() ?? "Null");
                     while (node.Previous != -1)
                     {
-                        builder.Append(", ");
+                        builder.Append(">, <");
                         node = goals[node.Previous];
-                        builder.Append(node.Goal.ToString());
+                        builder.Append(node.Goal.ToString() ?? "Null");
                     }
-                    builder.Append(']');
+                    builder.Append(">]");
                 }
                 builder.Append(')');
                 string text = builder.ToString(initialLength, builder.Length - initialLength);

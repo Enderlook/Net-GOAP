@@ -76,7 +76,7 @@ namespace Enderlook.GOAP
             if (Toggle.IsOn<TLog>())
             {
                 Debug.Assert(builder is not null);
-                builder.Append("Finalized planning.\n");
+                builder.Append("Finalized Planning.\n");
             }
 
             if ((state & State.Cancelled) != 0)
