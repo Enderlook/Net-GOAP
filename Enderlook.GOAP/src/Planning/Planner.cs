@@ -61,4 +61,3 @@ namespace Enderlook.GOAP.Planning
         }
     }
 }
-

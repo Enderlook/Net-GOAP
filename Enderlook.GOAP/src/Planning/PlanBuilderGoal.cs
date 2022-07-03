@@ -42,7 +42,7 @@ namespace Enderlook.GOAP.Planning
 
         /// <summary>
         /// Includes a helper instance to reduce unnecessary allocations.<br/>
-        /// The instance (the type is not required, so this also supports class subtyping) must implement at least one of <see cref="IGoalMerge{TGoal}"/>, <see cref="IGoalPool{TGoal}"/>, <see cref="IWorldStatePool{TWorld}"/>.
+        /// The instance (the type is not required, so this also supports class subtyping) must implement at least one of <see cref="IGoalMerge{TGoal}"/>, <see cref="IGoalPool{TGoal}"/> or <see cref="IWorldStatePool{TWorld}"/>.
         /// </summary>
         /// <typeparam name="THelper">Type of helper.</typeparam>
         /// <param name="helper">Helper instance.</param>
@@ -130,7 +130,7 @@ namespace Enderlook.GOAP.Planning
             DebugAssert();
 
             Planner.RunAndDispose<AgentWrapper<TWorldState, TGoal, TAction, TGoals, TActions>, TWorldState, TGoal, TAction, EndlessWatchdog>(
-                new (worldState, goals, actions), plan, new(), log);
+                new(worldState, goals, actions), plan, new(), log);
             return plan;
         }
 
