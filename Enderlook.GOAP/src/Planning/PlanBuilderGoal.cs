@@ -113,8 +113,8 @@ namespace Enderlook.GOAP.Planning
         /// <exception cref="ArgumentException">Thrown when instance is default.</exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="maximumMilliseconds"/> is 0 or negative.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public PlanBuilderWatchdog<TWorldState, TGoal, TGoals, TAction, TActions, CostWatchdog> WithTimeout(float maximumMilliseconds)
-            => WithWatchdog(new CostWatchdog(maximumMilliseconds));
+        public PlanBuilderWatchdog<TWorldState, TGoal, TGoals, TAction, TActions, TimeOutWatchdog> WithTimeout(int maximumMilliseconds)
+            => WithWatchdog(new TimeOutWatchdog(maximumMilliseconds));
 
         /// <summary>
         /// Executes the planification synchronously.
