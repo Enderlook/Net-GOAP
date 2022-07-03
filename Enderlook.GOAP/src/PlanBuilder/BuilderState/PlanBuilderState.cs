@@ -79,6 +79,8 @@ namespace Enderlook.GOAP
                 builder.Append("Finalized Planning.\n");
             }
 
+            state |= State.Finalized;
+
             if ((state & State.Cancelled) != 0)
             {
                 if (Toggle.IsOn<TLog>())
@@ -90,6 +92,7 @@ namespace Enderlook.GOAP
                     builder.Append("\nRemaining nodes to visit: ").Append(toVisit.Count).Append('.');
                 }
                 plan.SetCancelled();
+                return;
             }
 
             if ((state & State.Found) == 0)
@@ -103,6 +106,7 @@ namespace Enderlook.GOAP
                     builder.Append("\nRemaining nodes to visit: ").Append(toVisit.Count).Append('.');
                 }
                 plan.SetNotFound();
+                return;
             }
 
             if (Toggle.IsOn<TLog>())
@@ -141,8 +145,6 @@ namespace Enderlook.GOAP
             }
 
             endNode = lastIndex;
-
-            state |= State.Finalized;
 
             plan.SetFound(ref actions, cost, goalIndex, goals[goalIndex].Goal);
         }
