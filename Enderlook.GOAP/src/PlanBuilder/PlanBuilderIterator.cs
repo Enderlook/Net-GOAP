@@ -332,9 +332,12 @@ namespace Enderlook.GOAP
             {
                 case SatisfactionResult.Satisfied:
                 {
+                    Debug.Assert(builder is not null, "Is disposed.");
+
                     if (Toggle.IsOn<TLog>())
                         builder.AppendToLog(" which is satisfied:\n    - ");
 
+                    float totalCost;
                     int goalIndex;
                     if (action.GetCostAndRequiredGoal(out float actionCost, out TGoal requiredGoal))
                     {
@@ -345,11 +348,45 @@ namespace Enderlook.GOAP
                     if (currentGoal.WithPop(out goalIndex))
                         goto process;
 
-                    FoundValidPath(ref this, id, currentCost + actionCost, actionIndex, newWorldState);
+                    totalCost = currentCost + actionCost;
+
+                foundValidPath:
+                    if (typeof(IWorldStatePool<TWorldState>).IsAssignableFrom(typeof(TAgent)))
+                        ((IWorldStatePool<TWorldState>)agent).Return(newWorldState);
+                    builder.EnqueueValidPath<TLog>(id, actionIndex, totalCost);
                     break;
 
-                    process:
-                    ProcessGoalAndCheckForChainedSatisfaction(ref this, id, currentCost, actionIndex, newWorldState, actionCost, goalIndex);
+                process:
+                    int newGoals = goalIndex;
+
+                    PlanBuilderState<TWorldState, TGoal, TAction>.GoalNode newGoal = builder.GetGoal(newGoals);
+                    if (newGoal.Goal.CheckAndTrySatisfy(ref newWorldState))
+                    {
+                        do
+                        {
+                            if (Toggle.IsOn<TLog>())
+                            {
+                                builder.AppendToLog("The goal <");
+                                if (newGoal.Goal.ToString() is string log)
+                                {
+                                    builder.AppendToLog(log);
+                                    builder.AppendToLog("> was also satisfied with the executed action.\n    - ");
+                                }
+                                else
+                                    builder.AppendToLog("Null> was also satisfied with the executed action.\n    - ");
+                            }
+
+                            if (!newGoal.WithPop(out newGoals))
+                            {
+                                totalCost = currentCost;
+                                goto foundValidPath;
+                            }
+
+                            newGoal = builder.GetGoal(newGoals);
+                        } while (newGoal.Goal.CheckAndTrySatisfy(ref newWorldState));
+                    }
+
+                    builder.Enqueue<TLog>(id, actionIndex, currentCost + actionCost, newGoals, newWorldState);
                     break;
                 }
                 case SatisfactionResult.Progressed:
@@ -358,7 +395,30 @@ namespace Enderlook.GOAP
                         builder.AppendToLog(" which has progressed:\n    - ");
 
                     if (action.GetCostAndRequiredGoal(out float actionCost, out TGoal requiredGoal))
-                        ProcessGoalAndCheckForSatisfaction(ref this, newWorldState, actionCost, requiredGoal);
+                    {
+                        Debug.Assert(builder is not null, "Is disposed.");
+                        if (requiredGoal.CheckAndTrySatisfy(ref newWorldState))
+                        {
+                            if (Toggle.IsOn<TLog>())
+                            {
+                                builder.AppendToLog("The goal ");
+                                if (requiredGoal.ToString() is string log)
+                                {
+                                    builder.AppendToLog(log);
+                                    builder.AppendToLog("> was also satisfied with the executed action.\n    - ");
+                                }
+                                else
+                                    builder.AppendToLog("Null> was also satisfied with the executed action.\n    - ");
+                            }
+
+                            builder.Enqueue<TLog>(id, actionIndex, currentCost + actionCost, currentGoalIndex, newWorldState);
+                        }
+                        else
+                        {
+                            int newGoals = PlanBuilderState<TWorldState, TGoal, TAction>.GoalNode.WithPush(builder, currentGoalIndex, requiredGoal);
+                            builder.Enqueue<TLog>(id, actionIndex, currentCost + actionCost, newGoals, newWorldState);
+                        }
+                    }
                     else
                         builder.Enqueue<TLog>(id, actionIndex, currentCost + actionCost, currentGoalIndex, newWorldState);
                     break;
@@ -388,82 +448,6 @@ namespace Enderlook.GOAP
                 if (typeof(IWorldStatePool<TWorldState>).IsAssignableFrom(typeof(TAgent)))
                     ((IWorldStatePool<TWorldState>)self.agent).Return(newMemory);
                 self.builder.EnqueueValidPath<TLog>(id, action, cost);
-            }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            static void ProcessGoalAndCheckForChainedSatisfaction(
-                ref PlanBuilderIterator<TAgent, TWorldState, TGoal, TAction, TWatchdog, TLog> self,
-                int id, float currentCost, int actionIndex, TWorldState newWorldState, float actionCost, int newGoals)
-            {
-                Debug.Assert(self.builder is not null, "Is disposed.");
-
-                PlanBuilderState<TWorldState, TGoal, TAction>.GoalNode newGoal = self.builder.GetGoal(newGoals);
-                if (newGoal.Goal.CheckAndTrySatisfy(ref newWorldState))
-                    WasSatisfied(ref self, id, currentCost, actionIndex, ref newWorldState, actionCost, out newGoals, ref newGoal);
-                else
-                    self.builder.Enqueue<TLog>(id, actionIndex, currentCost + actionCost, newGoals, newWorldState);
-
-                static void WasSatisfied(
-                    ref PlanBuilderIterator<TAgent, TWorldState, TGoal, TAction, TWatchdog, TLog> self,
-                    int id, float currentCost, int actionIndex, ref TWorldState newWorldState, float actionCost,
-                    out int newGoals, ref PlanBuilderState<TWorldState, TGoal, TAction>.GoalNode newGoal)
-                {
-                    Debug.Assert(self.builder is not null, "Is disposed.");
-
-                    do
-                    {
-                        if (Toggle.IsOn<TLog>())
-                        {
-                            self.builder.AppendToLog("The goal <");
-                            if (newGoal.Goal.ToString() is string log)
-                            {
-                                self.builder.AppendToLog(log);
-                                self.builder.AppendToLog("> was also satisfied with the executed action.\n    - ");
-                            }
-                            else
-                                self.builder.AppendToLog("Null> was also satisfied with the executed action.\n    - ");
-                        }
-
-                        if (!newGoal.WithPop(out newGoals))
-                        {
-                            FoundValidPath(ref self, id, currentCost, actionIndex, newWorldState);
-                            return;
-                        }
-
-                        newGoal = self.builder.GetGoal(newGoals);
-                    } while (newGoal.Goal.CheckAndTrySatisfy(ref newWorldState));
-
-                    self.builder.Enqueue<TLog>(id, actionIndex, currentCost + actionCost, newGoals, newWorldState);
-                }
-            }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            static void ProcessGoalAndCheckForSatisfaction(
-                ref PlanBuilderIterator<TAgent, TWorldState, TGoal, TAction, TWatchdog, TLog> self,
-                TWorldState newWorldState, float actionCost, TGoal requiredGoal)
-            {
-                Debug.Assert(self.builder is not null, "Is disposed.");
-                if (requiredGoal.CheckAndTrySatisfy(ref newWorldState))
-                {
-                    if (Toggle.IsOn<TLog>())
-                    {
-                        self.builder.AppendToLog("The goal ");
-                        if (requiredGoal.ToString() is string log)
-                        {
-                            self.builder.AppendToLog(log);
-                            self.builder.AppendToLog("> was also satisfied with the executed action.\n    - ");
-                        }
-                        else
-                            self.builder.AppendToLog("Null> was also satisfied with the executed action.\n    - ");
-                    }
-
-                    self.builder.Enqueue<TLog>(self.id, self.actionIndex, self.currentCost + actionCost, self.currentGoalIndex, newWorldState);
-                }
-                else
-                {
-                    int newGoals = PlanBuilderState<TWorldState, TGoal, TAction>.GoalNode.WithPush(self.builder, self.currentGoalIndex, requiredGoal);
-                    self.builder.Enqueue<TLog>(self.id, self.actionIndex, self.currentCost + actionCost, newGoals, newWorldState);
-                }
             }
         }
     }
