@@ -30,9 +30,11 @@ namespace Enderlook.GOAP
             bool special = poolGoal || poolWorld || mergeGoal ;
             string name = $"AgentWrapper{(poolGoal ? "PoolGoal" : "")}{(poolWorld ? "PoolWorld" : "")}{(mergeGoal ? "MergeGoal" : "")}";
             return (name, $@"
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 using Enderlook.GOAP.Utilities;
 using Enderlook.GOAP.Watchdogs;
@@ -90,16 +92,44 @@ namespace Enderlook.GOAP
                 switch (actions)
                 {{
                     case TAction[] array:
-                        for (int i = 0; i < array.Length; i++)
-                            builder.AddAction(array[i]);
+                    {{
+#if NET5_0_OR_GREATER
+                        ref TAction current = ref MemoryMarshal.GetArrayDataReference(array);
+#else
+                        ref TAction current = ref MemoryMarshal.GetReference((Span<TAction>)array);
+#endif
+                        ref TAction end = ref Unsafe.Add(ref current, array.Length);
+                        while (Unsafe.IsAddressLessThan(ref current, ref end))
+                        {{
+                            builder.AddAction(current);
+                            current = ref Unsafe.Add(ref current, 1);
+                        }}
                         break;
+                    }}
                     case List<TAction> list:
+                    {{
+#if NET5_0_OR_GREATER
+                        Span<TAction> span = CollectionsMarshal.AsSpan(list);
+                        ref TAction current = ref MemoryMarshal.GetReference(span);
+                        ref TAction end = ref Unsafe.Add(ref current, span.Length);
+                        while (Unsafe.IsAddressLessThan(ref current, ref end))
+                        {{
+                            builder.AddAction(current);
+                            current = ref Unsafe.Add(ref current, 1);
+                        }}
+#else
                         for (int i = 0; i < list.Count; i++)
                             builder.AddAction(list[i]);
+#endif
                         break;
+                    }}
                     case IList<TAction> ilist:
                         for (int i = 0; i < ilist.Count; i++)
                             builder.AddAction(ilist[i]);
+                        break;
+                    case IReadOnlyList<TAction> irlist:
+                        for (int i = 0; i < irlist.Count; i++)
+                            builder.AddAction(irlist[i]);
                         break;
                     default:
                         foreach (TAction action in actions)
@@ -125,16 +155,44 @@ namespace Enderlook.GOAP
                     switch (cheapestGoal.Goals)
                     {{
                         case TGoal[] array:
-                            for (int i = 0; i < array.Length; i++)
-                                builder.AddGoal(array[i]);
+                        {{
+#if NET5_0_OR_GREATER
+                            ref TGoal current = ref MemoryMarshal.GetArrayDataReference(array);
+#else
+                            ref TGoal current = ref MemoryMarshal.GetReference((Span<TGoal>)array);
+#endif
+                            ref TGoal end = ref Unsafe.Add(ref current, array.Length);
+                            while (Unsafe.IsAddressLessThan(ref current, ref end))
+                            {{
+                                builder.AddGoal(current);
+                                current = ref Unsafe.Add(ref current, 1);
+                            }}
                             break;
+                        }}
                         case List<TGoal> list:
+                        {{
+#if NET5_0_OR_GREATER
+                            Span<TGoal> span = CollectionsMarshal.AsSpan(list);
+                            ref TGoal current = ref MemoryMarshal.GetReference(span);
+                            ref TGoal end = ref Unsafe.Add(ref current, span.Length);
+                            while (Unsafe.IsAddressLessThan(ref current, ref end))
+                            {{
+                                builder.AddGoal(current);
+                                current = ref Unsafe.Add(ref current, 1);
+                            }}
+#else
                             for (int i = 0; i < list.Count; i++)
                                 builder.AddGoal(list[i]);
+#endif
                             break;
+                        }}
                         case IList<TGoal> ilist:
                             for (int i = 0; i < ilist.Count; i++)
                                 builder.AddGoal(ilist[i]);
+                            break;
+                        case IReadOnlyList<TGoal> irlist:
+                            for (int i = 0; i < irlist.Count; i++)
+                                builder.AddGoal(irlist[i]);
                             break;
                         default:
                             foreach (TGoal goal in cheapestGoal.Goals)
