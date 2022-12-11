@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>netstandard2.0;netstandard2.1;net5;net6</TargetFrameworks>
+    <TargetFrameworks>netstandard2.0;netstandard2.1;net5;net6;net7</TargetFrameworks>
     <OutputType>Library</OutputType>
     <PackageId>Enderlook.GOAP</PackageId>
     <AssemblyName>Enderlook.GOAP</AssemblyName>
@@ -13,7 +13,7 @@
     <Version>0.1.0</Version>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
-    <LangVersion>9</LangVersion>
+    <LangVersion>11</LangVersion>
     <CheckForOverflowUnderflow Condition="'$(Configuration)' == 'Debug'">true</CheckForOverflowUnderflow>
     <Nullable>enable</Nullable>
   </PropertyGroup>
