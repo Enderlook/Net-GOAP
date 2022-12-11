@@ -1,4 +1,4 @@
-﻿using Enderlook.Collections;
+﻿using Enderlook.Collections.Priority;
 using Enderlook.Collections.LowLevel;
 using Enderlook.GOAP.Utilities;
 

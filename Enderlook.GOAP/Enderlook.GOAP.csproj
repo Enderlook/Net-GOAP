@@ -19,9 +19,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Enderlook.Collections-Extensions" Version="0.1.0" />
-    <PackageReference Include="Enderlook.Collections.LowLevel" Version="0.6.0" />
-    <PackageReference Include="Enderlook.Collections" Version="0.1.0" />
+    <PackageReference Include="Enderlook.Collections" Version="0.2.0" />
+    <PackageReference Include="Enderlook.Collections.LowLevel" Version="0.8.0" />
+    <PackageReference Include="Enderlook.Collections.Priority" Version="0.1.0" />
   </ItemGroup>
 
   <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard2.0' ">
