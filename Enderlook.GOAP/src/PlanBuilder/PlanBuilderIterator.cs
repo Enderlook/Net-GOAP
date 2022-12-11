@@ -139,13 +139,8 @@ namespace Enderlook.GOAP
             if (Toggle.IsOn<TLog>())
             {
                 builder.AppendToLog("Start planning.\nInitial world state: <");
-                if (memory.ToString() is string log)
-                {
-                    builder.AppendToLog(log);
-                    builder.AppendAndLog(">.");
-                }
-                else
-                    builder.AppendAndLog("<Null>.");
+                builder.AppendToLog(memory.ToString() ?? "Null");
+                builder.AppendToLog(">.");
             }
 
             agent.SetGoals(ref this);
@@ -305,13 +300,8 @@ namespace Enderlook.GOAP
 
             if (Toggle.IsOn<TLog>())
             {
-                if (newWorldState.ToString() is string log)
-                {
-                    builder.AppendToLog(log);
-                    builder.AppendToLog(">.");
-                }
-                else
-                    builder.AppendToLog("Null>.");
+                builder.AppendToLog(newWorldState.ToString() ?? "Null");
+                builder.AppendToLog(">.");
             }
 
             PlanBuilderState<TWorldState, TGoal, TAction>.GoalNode currentGoal = builder.GetGoal(currentGoalIndex);
@@ -319,13 +309,8 @@ namespace Enderlook.GOAP
             if (Toggle.IsOn<TLog>())
             {
                 builder.AppendToLog("\n   Having as goal <");
-                if (currentGoal.Goal.ToString() is string log)
-                {
-                    builder.AppendToLog(log);
-                    builder.AppendToLog('>');
-                }
-                else
-                    builder.AppendToLog("Null>");
+                builder.AppendToLog(currentGoal.Goal.ToString() ?? "Null");
+                builder.AppendToLog('>');
             }
 
             switch (currentGoal.Goal.CheckAndTrySatisfy(currentWorldState, ref newWorldState))
@@ -367,13 +352,8 @@ namespace Enderlook.GOAP
                             if (Toggle.IsOn<TLog>())
                             {
                                 builder.AppendToLog("The goal <");
-                                if (newGoal.Goal.ToString() is string log)
-                                {
-                                    builder.AppendToLog(log);
-                                    builder.AppendToLog("> was also satisfied with the executed action.\n    - ");
-                                }
-                                else
-                                    builder.AppendToLog("Null> was also satisfied with the executed action.\n    - ");
+                                builder.AppendToLog(newGoal.Goal.ToString() ?? "Null");
+                                builder.AppendToLog("> was also satisfied with the executed action.\\n    - ");
                             }
 
                             if (!newGoal.WithPop(out newGoals))
@@ -401,14 +381,9 @@ namespace Enderlook.GOAP
                         {
                             if (Toggle.IsOn<TLog>())
                             {
-                                builder.AppendToLog("The goal ");
-                                if (requiredGoal.ToString() is string log)
-                                {
-                                    builder.AppendToLog(log);
-                                    builder.AppendToLog("> was also satisfied with the executed action.\n    - ");
-                                }
-                                else
-                                    builder.AppendToLog("Null> was also satisfied with the executed action.\n    - ");
+                                builder.AppendToLog("The goal <");
+                                builder.AppendToLog(requiredGoal.ToString() ?? "Null");
+                                builder.AppendToLog("> was also satisfied with the executed action.\n    - ");
                             }
 
                             builder.Enqueue<TLog>(id, actionIndex, currentCost + actionCost, currentGoalIndex, newWorldState);
