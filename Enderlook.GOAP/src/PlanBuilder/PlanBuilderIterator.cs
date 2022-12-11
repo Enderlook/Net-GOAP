@@ -414,16 +414,6 @@ namespace Enderlook.GOAP
                     break;
                 }
             }
-
-            static void FoundValidPath(
-                ref PlanBuilderIterator<TAgent, TWorldState, TGoal, TAction, TWatchdog, TLog> self,
-                int id, float cost, int action, TWorldState newMemory)
-            {
-                Debug.Assert(self.builder is not null, "Is disposed.");
-                if (typeof(IWorldStatePool<TWorldState>).IsAssignableFrom(typeof(TAgent)))
-                    ((IWorldStatePool<TWorldState>)self.agent).Return(newMemory);
-                self.builder.EnqueueValidPath<TLog>(id, action, cost);
-            }
         }
     }
 }
